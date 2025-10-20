@@ -42,7 +42,7 @@
     }
   },
   "devDependencies": {
-    "@playwright/test": "^1.54.0",
+    "@playwright/test": "^1.56.1",
     "@types/dockerode": "^3.3.42",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.0.12",
