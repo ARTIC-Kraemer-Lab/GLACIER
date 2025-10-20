@@ -76,6 +76,9 @@ export default function ParametersPage({ instance, logMessage, setHasWorkflowRun
       let schema = await API.getWorkflowSchema(instance.workflow_version.path);
       // Add profile selection to the a separate schema category
       if (profiles.length > 0) {
+        if (!schema['properties']) {
+          schema['properties'] = {};
+        }
         schema['properties']['profile'] = {
           type: 'string',
           title: 'Execution Profile',
