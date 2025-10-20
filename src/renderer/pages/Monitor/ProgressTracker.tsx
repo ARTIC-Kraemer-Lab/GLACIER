@@ -36,7 +36,7 @@ export default function ProgressTracker({ instance, nextflowProgress, workflowSt
 
   const handleOpenProcessLog = (name) => {
     setWorkID(nextflowProgress[name]['work']);
-    setShowWork(true);
+    setShowWork(!showWork);
   };
 
   useEffect(() => {
