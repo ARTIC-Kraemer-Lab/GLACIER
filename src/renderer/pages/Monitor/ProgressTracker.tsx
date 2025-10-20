@@ -11,6 +11,7 @@ import AnsiLog from './AnsiLog.js';
 import { API } from '../../services/api.js';
 import { useTranslation } from 'react-i18next';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
+import DescriptionIcon from '@mui/icons-material/Description';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 
 const SECOND = 1000;
@@ -36,7 +37,7 @@ export default function ProgressTracker({ instance, nextflowProgress, workflowSt
 
   const handleOpenProcessLog = (name) => {
     setWorkID(nextflowProgress[name]['work']);
-    setShowWork(true);
+    setShowWork(!showWork);
   };
 
   useEffect(() => {
@@ -80,7 +81,13 @@ export default function ProgressTracker({ instance, nextflowProgress, workflowSt
                       <FolderOutlinedIcon />
                     </IconButton>
                     <IconButton onClick={() => handleOpenProcessLog(name)}>
-                      <DescriptionOutlinedIcon />
+                    {(nextflowProgress[name]['work'] === workID && showWork) ?
+                      (
+                        <DescriptionIcon color="primary" />
+                      ) : (
+                        <DescriptionOutlinedIcon />
+                      )
+                    }
                     </IconButton>
                   </>
                 )}

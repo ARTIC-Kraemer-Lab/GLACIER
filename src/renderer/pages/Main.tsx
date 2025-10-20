@@ -128,6 +128,7 @@ export default function MainPage({ darkMode, setDarkMode }) {
       const newQueue = [...prev, { instance: instance, name: instance.name }];
       setSelectedLauncherTab(newQueue.length - 1);
       setView('runs');
+      setItem(instance.id);
       return newQueue;
     });
   };

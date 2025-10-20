@@ -143,6 +143,21 @@ export default function HeaderMenu({ instance, logMessage }) {
         </MenuItem>
       </Menu>
 
+      <Paper
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          px: 2,
+        }}
+      >
+        <Typography variant="h6" sx={{textAlign: 'center'}}>
+          {instance['name']}
+        </Typography>
+        <Typography variant="subtitle1" sx={{textAlign: 'center'}}>
+          {instance['workflow_version']['name']}
+        </Typography>
+      </Paper>
+
       <Button
         id="open-results-folder-button"
         onClick={() => handleOpenResultsFolder()}

@@ -17,6 +17,8 @@ import { getAvailableProfiles as getAvailableProfiles_Nextflow } from '../runner
 import { parseNextflowLog } from '../runners/nextflow/nf-parse.js';
 //
 
+const instance_database_file = 'instances.json';
+
 export enum IWorkflowType {
   NEXTFLOW = 'nextflow',
   SNAKEMAKE = 'snakemake',
@@ -189,6 +191,7 @@ export class Collection {
   parseCollection() {
     this.parseWorkflows();
     this.parseInstances();
+    this.printCollection();
   }
 
   private parseWorkflows() {
@@ -250,11 +253,18 @@ export class Collection {
         if (!repo_and_version.includes('@')) continue;
         const repo = repo_and_version.split('@')[0];
         const version = repo_and_version.split('@')[1];
+        console.log(`Parsing instances for workflow: ${owner}/${repo}@${version}`);
         // Find the corresponding workflow version
         const wf = this.workflows.find((wf) => wf.id === `${owner}/${repo}`);
-        if (wf === undefined) continue;
+        if (wf === undefined) {
+          console.log(`Workflow ${owner}/${repo} not found for instances, skipping.`);
+          continue;
+        }
         const wf_version = wf.versions.find((v) => v.version === version);
-        if (wf_version === undefined) continue;
+        if (wf_version === undefined) {
+          console.log(`Workflow version ${owner}/${repo}@${version} not found for instances, skipping.`);
+          continue;
+        }
         // Parse instances
         const versionPath = path.join(ownerPath, repo_and_version);
         const instanceDirs = fs.readdirSync(versionPath);
@@ -269,6 +279,70 @@ export class Collection {
           });
           this.workflow_instances.push(instance);
         }
+      }
+    }
+    // Now that the instance folder tree has been parsed, cross-reference with the
+    // instance database that contains process IDs, etc.
+    this.parseInstanceDatabase();
+  }
+
+  private parseInstanceDatabase() {
+    const db_path = path.join(this.root_path, instance_database_file);
+    if (!fs.existsSync(db_path)) {
+      console.log('No instance database found.');
+      return;
+    }
+    let db_updated = false;
+    const db = JSON.parse(fs.readFileSync(db_path, 'utf-8'));
+    for (const run of db.runs) {
+      const instance = this.workflow_instances.find((inst) => inst.id === run.id);
+      if (!instance) {
+        console.log(`Instance ${run.id} found in database but not in filesystem, skipping.`);
+        continue;
+      }
+      // Get latest run
+      if (run.runs && run.runs.length > 0) {
+        const latest_run = run.runs[run.runs.length - 1];
+        if (latest_run.pids && latest_run.pids.length > 0) {
+          instance.pid = latest_run.pids;
+          for(const pid of latest_run.pids) {
+            try {
+              process.kill(pid, 0); // Check if process is running
+              console.log(`Instance ${instance.id} has running PID: ${pid}`);
+            } catch (e) {
+              console.log(`Instance ${instance.id} PID ${pid} is not running.`);
+              // Remove PID from instance
+              instance.pid = instance.pid.filter((p) => p !== pid);
+              // Add termination status to database
+              run.runs.push({
+                datetime: new Date().toISOString(),
+                pids: [],
+                status: 'closed'
+              });
+              db_updated = true;
+            }
+          }
+        }
+      }
+    }
+    if (db_updated) {
+      fs.writeFileSync(db_path, JSON.stringify(db, null, 2));
+    }
+  }
+
+  private printCollection() {
+    console.log('Workflows in collection:');
+    for (const wf of this.workflows) {
+      console.log(`- ${wf.id}`);
+      for (const ver of wf.versions) {
+        console.log(`  - Version: ${ver.version} at ${ver.path}`);
+      }
+    }
+    console.log('Instances in collection:');
+    for (const inst of this.workflow_instances) {
+      console.log(`- ${inst.id} (${inst.workflow_version.id}) at ${inst.path}`);
+      if (inst.pid.length > 0) {
+        console.log(`  - PIDs: ${inst.pid.join(', ')}`);
       }
     }
   }
@@ -318,6 +392,7 @@ export class Collection {
       path: instance_path
     });
     this.workflow_instances.push(instance);
+    this.recordRunWorkflow(instance, 'created');
     return instance;
   }
 
@@ -608,7 +683,7 @@ export class Collection {
       throw new Error(`Instance ${instance.id} not found in collection.`);
     }
     // Read database from glacier root
-    const db_path = path.join(this.root_path, 'db.json');
+    const db_path = path.join(this.root_path, instance_database_file);
     let db: any = { runs: [] };
     if (fs.existsSync(db_path)) {
       db = JSON.parse(fs.readFileSync(db_path, 'utf-8'));
