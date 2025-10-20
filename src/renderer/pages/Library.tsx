@@ -21,7 +21,7 @@ export default function LibraryPage({
   drawerOpen,
   setTargetDir,
   setFolderPath,
-  addToLauncherQueue,
+  addToInstancesList,
   logMessage
 }) {
   const { t } = useTranslation();
@@ -56,7 +56,7 @@ export default function LibraryPage({
                     id={`collections-run-${repo.name}`}
                     size="small"
                     variant="contained"
-                    onClick={() => addToLauncherQueue(repo)}
+                    onClick={() => addToInstancesList(repo)}
                   >
                     {t('library.run')}
                   </Button>

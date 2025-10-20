@@ -33,10 +33,8 @@ import { API } from '../services/api.js';
 import { useTranslation } from 'react-i18next';
 
 export default function RunsPage({
-  launcherQueue,
-  setLauncherQueue,
-  selectedTab,
-  setSelectedTab,
+  instancesList,
+  setInstancesList,
   logMessage,
   item,
   setItem
@@ -50,7 +48,7 @@ export default function RunsPage({
     logMessage(`Launched workflow ${instance.name}`);
   };
 
-  if (launcherQueue.length === 0) {
+  if (instancesList.length === 0) {
     return (
       <Container>
         <Typography variant="h6" sx={{ mt: 2 }}>
@@ -60,13 +58,11 @@ export default function RunsPage({
     );
   }
 
-  const activeWorkflow = launcherQueue[selectedTab];
-
   function createData(name: string, workflow: string) {
     return { name, workflow };
   }
 
-  const rows = launcherQueue.map((item) =>
+  const rows = instancesList.map((item) =>
     createData(item.name, item.instance.workflow_version.name)
   );
 
@@ -98,7 +94,6 @@ export default function RunsPage({
                       <IconButton
                         onClick={() => {
                           setItem(row.name);
-                          setSelectedTab(launcherQueue.findIndex((i) => i.name === row.name));
                         }}
                       >
                         <NotStartedIcon />
@@ -116,7 +111,7 @@ export default function RunsPage({
         </Box>
       ) : (
         /* Parameters view for a selected workflow */
-        launcherQueue
+        instancesList
           .filter(({ name }) => name === item)
           .map(({ instance, name }, idx) =>
             hasWorkflowRun ? (

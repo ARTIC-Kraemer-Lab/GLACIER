@@ -68,8 +68,7 @@ export default function MainPage({ darkMode, setDarkMode }) {
   const [output, setOutput] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [view, setView] = useState<navbar_page>('hub');
-  const [launcherQueue, setLauncherQueue] = useState([]);
-  const [selectedLauncherTab, setSelectedLauncherTab] = useState(0);
+  const [instancesList, setInstancesList] = useState([]);
   const [log, setLog] = useState([]);
   const [severity, setSeverity] = useState<severityLevels>('info');
   const [message, setMessage] = useState('');
@@ -81,7 +80,7 @@ export default function MainPage({ darkMode, setDarkMode }) {
       const path = await API.getCollectionsPath();
       setCollectionsPath(path);
       const instances = await API.listWorkflowInstances();
-      setLauncherQueue(
+      setInstancesList(
         instances.map((instance) => ({
           instance: instance,
           name: instance.name
@@ -119,14 +118,13 @@ export default function MainPage({ darkMode, setDarkMode }) {
     return newName;
   };
 
-  const addToLauncherQueue = async (repo) => {
+  const addToInstancesList = async (repo) => {
     const workflow_id = repo.id;
     const instance = await API.createWorkflowInstance(workflow_id);
     const wf_ver = instance.workflow_version;
 
-    setLauncherQueue((prev) => {
+    setInstancesList((prev) => {
       const newQueue = [...prev, { instance: instance, name: instance.name }];
-      setSelectedLauncherTab(newQueue.length - 1);
       setView('runs');
       setItem(instance.id);
       return newQueue;
@@ -244,15 +242,13 @@ export default function MainPage({ darkMode, setDarkMode }) {
             setTargetDir={setTargetDir}
             setFolderPath={setFolderPath}
             drawerOpen={drawerOpen}
-            addToLauncherQueue={addToLauncherQueue}
+            addToInstancesList={addToInstancesList}
             logMessage={logMessage}
           />
         ) : view === 'runs' ? (
           <RunsPage
-            launcherQueue={launcherQueue}
-            setLauncherQueue={setLauncherQueue}
-            selectedTab={selectedLauncherTab}
-            setSelectedTab={setSelectedLauncherTab}
+            instancesList={instancesList}
+            setInstancesList={setInstancesList}
             logMessage={logMessage}
             item={item}
             setItem={setItem}
