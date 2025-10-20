@@ -6,7 +6,7 @@ import {
   getDefaultCollectionsDir
 } from '../dist/main/paths.js';
 import { Collection } from '../dist/main/collection.js';
-import { runRepo } from '../dist/main/docker.js';
+import { runRepo } from '../dist/runners/docker/docker.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';

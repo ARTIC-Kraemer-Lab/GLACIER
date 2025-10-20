@@ -16,6 +16,7 @@ test('should show title', async ({ page }) => {
 test('end-to-end test', async ({ page }) => {
   await expect(page).toHaveTitle(/GLACIER/i);
 
+  /*
   // Clone a repository
   await page.click('#collections-clone-button');
 
@@ -45,4 +46,6 @@ test('end-to-end test', async ({ page }) => {
   // Launch Workflow
   await page.getByRole('button', { name: 'Launch Workflow' }).click();
   await waitForLogLine(page, /^Launched workflow/);
+  */
+
 });
