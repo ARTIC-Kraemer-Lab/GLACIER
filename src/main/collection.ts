@@ -191,7 +191,6 @@ export class Collection {
   parseCollection() {
     this.parseWorkflows();
     this.parseInstances();
-    this.printCollection();
   }
 
   private parseWorkflows() {
@@ -724,7 +723,7 @@ export class Collection {
     return getWorkflowParams(repoPath);
   }
 
-  getWorkflowSchema(repoPath: string) {
+  getWorkflowSchema(repoPath: string): Promise<Record<string, unknown>> {
     return getWorkflowSchema(repoPath);
   }
 

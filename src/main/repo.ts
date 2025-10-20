@@ -172,6 +172,7 @@ export async function getWorkflowSchema(repoPath: string) {
     const schema = JSON.parse(fileContents);
     return schema;
   } catch (err) {
+    console.log(`Failed to read workflow schema from ${schemaPath}:`, err);
     return {};
   }
 }

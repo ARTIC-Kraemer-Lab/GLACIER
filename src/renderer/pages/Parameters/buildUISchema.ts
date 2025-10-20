@@ -14,10 +14,13 @@ export function buildUISchema(
   const categories = (schema.allOf ?? [])
     .map((entry: any) => {
       const ref: string | undefined = entry?.$ref;
-      if (!ref || !ref.startsWith('#/definitions/')) return null;
+      if (!ref) return null;
+      if (!ref.startsWith('#/$defs/') && !ref.startsWith('#/definitions/'))
+        return null;
 
-      const defKey = ref.replace('#/definitions/', '');
-      const def = schema.definitions?.[defKey];
+      let defKey = ref.replace('#/definitions/', '');
+      defKey = defKey.replace('#/$defs/', '');
+      const def = schema.definitions?.[defKey] || schema.$defs?.[defKey];
       if (!def || def.type !== 'object') return null;
 
       const props = def.properties ?? {};
@@ -56,9 +59,13 @@ export function buildUISchema(
   // Also pick up any *root-level* properties not covered in allOf
   const allDefPropNames = new Set(
     (schema.allOf ?? [])
+      .map((e: any) => e?.$ref?.replace('#/$defs/', ''))
       .map((e: any) => e?.$ref?.replace('#/definitions/', ''))
       .filter(Boolean)
-      .flatMap((key: string) => Object.keys(schema.definitions?.[key]?.properties ?? {}))
+      .flatMap((key: string) => Object.keys(
+        (schema.$defs?.[key]?.properties ?? {}) ||
+        (schema.definitions?.[key]?.properties ?? {})
+      ))
   );
 
   const rootProps = Object.keys(schema.properties ?? {}).filter((k) => {
