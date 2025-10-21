@@ -43,7 +43,7 @@ const httpDispatch = async (endpoint, method = 'GET', body = null) => {
     options.body = JSON.stringify(body);
   }
   const res = await fetch(endpoint, options);
-  if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+  if (!res.ok) throw new Error(`HTTP error at ${endpoint}, status: ${res.status}`);
   return res.json();
 };
 
