@@ -32,7 +32,7 @@ export interface IWorkflowVersion {
   type: IWorkflowType;
   version: string | undefined; // github tag, undefined for local
   path: string;
-  parent?: IWorkflow; // reference to parent workflow
+  parent_id: string; // reference to parent workflow
 }
 
 class WorkflowVersion implements IWorkflowVersion {
@@ -41,15 +41,15 @@ class WorkflowVersion implements IWorkflowVersion {
   type: IWorkflowType;
   version: string | undefined;
   path: string;
-  parent?: IWorkflow; // reference to parent workflow
+  parent_id: string; // reference to parent workflow
 
-  constructor({ id, name, type, version, path, parent }: IWorkflowVersion) {
+  constructor({ id, name, type, version, path, parent_id }: IWorkflowVersion) {
     this.id = id;
     this.name = name;
     this.type = type;
     this.version = version;
     this.path = path;
-    this.parent = parent;
+    this.parent_id = parent_id;
   }
 }
 
@@ -254,7 +254,7 @@ export class Collection {
           type: type,
           version: version,
           path: versionPath,
-          parent: wf
+          parent_id: wf.id
         } as WorkflowVersion);
       }
     }
@@ -706,7 +706,7 @@ export class Collection {
       type: this.determineWorkflowType(repo.path),
       version: repo.version,
       path: repo.path,
-      parent: wf
+      parent_id: wf.id
     });
     wf.versions.push(version);
     this.workflows.push(wf);
@@ -718,7 +718,7 @@ export class Collection {
     store.set('collectionsPath', path);
   }
 
-  getWorkflowsList(): IRepo[] {
+  getCollections(): IRepo[] {
     return this.workflows.map((wf) => ({
       id: wf.id,
       name: wf.name,

@@ -36,90 +36,59 @@ const electronAPI = isElectron
     }
   : null;
 
-const httpAPI = {
-  createWorkflowInstance: async (workflow_id) => {
-    const res = await fetch('/api/create-workflow-instance', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ workflow_id })
-    });
-    if (!res.ok) throw new Error(`Failed to create workflow instance: ${res.statusText}`);
-    return res.json();
-  },
-
-  cloneRepo: async (repoRef) => {
-    const res = await fetch('/api/clone', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ repoRef })
-    });
-    if (!res.ok) throw new Error(`Clone failed: ${res.statusText}`);
-    return res.json();
-  },
-
-  runRepo: async (repo) => {
-    const res = await fetch('/api/run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(repo)
-    });
-    if (!res.ok) throw new Error(`Run failed: ${res.statusText}`);
-    return res.json();
-  },
-
-  syncRepo: async (repo) => {
-    const res = await fetch('/api/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: repo })
-    });
-    if (!res.ok) throw new Error(`Sync failed: ${res.statusText}`);
-    return res.json();
-  },
-
-  getCollections: async () => {
-    const res = await fetch('/api/collections');
-    if (!res.ok) throw new Error(`Failed to get collections: ${res.statusText}`);
-    return res.json();
-  },
-
-  getCollectionsPath: async () => {
-    const res = await fetch('/api/collections-path');
-    if (!res.ok) throw new Error('Failed to get collections path');
-    return res.text(); // since we send plain text
-  },
-
-  setCollectionsPath: async (path) => {
-    // implement if you add a POST endpoint for saving path
-  },
-
-  getContainerLogs: async (containerId) => {
-    const res = await fetch(`/api/containers/${containerId}/logs`);
-    if (!res.ok) throw new Error(`Failed to get logs: ${res.statusText}`);
-    return res.text(); // assuming logs come as text stream
-  },
-
-  deleteRepo: async (repoPath) => {
-    const res = await fetch('/api/delete-repo', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ repoPath })
-    });
-    if (!res.ok) throw new Error(`Failed to delete repo: ${res.statusText}`);
-    return res.json();
-  },
-
-  getWorkflowParams: async (repoPath) => {
-    const res = await fetch(`/api/workflow-params?repoPath=${encodeURIComponent(repoPath)}`);
-    if (!res.ok) throw new Error('Failed to fetch workflow params');
-    return res.json();
-  },
-
-  getWorkflowSchema: async (repoPath) => {
-    const res = await fetch(`/api/workflow-schema?repoPath=${encodeURIComponent(repoPath)}`);
-    if (!res.ok) throw new Error('Failed to fetch workflow schema');
-    return res.json();
+const httpDispatch = async (endpoint, method = 'GET', body = null) => {
+  const options = { method, headers: {} };
+  if (body) {
+    options.headers['Content-Type'] = 'application/json';
+    options.body = JSON.stringify(body);
   }
+  const res = await fetch(endpoint, options);
+  if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+  return res.json();
+};
+
+const httpAPI = {
+  createWorkflowInstance: async (workflow_id) =>
+    httpDispatch('/api/create-workflow-instance', 'POST', { workflow_id }),
+  runWorkflow: async (instance, params, opts) =>
+    httpDispatch('/api/run-workflow', 'POST', { instance, params, opts }),
+  listWorkflowInstances: async () => httpDispatch('/api/list-workflow-instances', 'POST', {}),
+  getWorkflowInstanceLogs: async (instance, logType) =>
+    httpDispatch('/api/get-workflow-instance-logs', 'POST', { instance, logType }),
+  getInstanceProgress: async (instance) =>
+    httpDispatch('/api/get-instance-progress', 'POST', { instance }),
+  getWorkflowInstanceParams: async (instance) =>
+    httpDispatch('/api/get-workflow-instance-params', 'POST', { instance }),
+  cancelWorkflowInstance: async (instance) =>
+    httpDispatch('/api/cancel-workflow-instance', 'POST', { instance }),
+  killWorkflowInstance: async (instance) =>
+    httpDispatch('/api/kill-workflow-instance', 'POST', { instance }),
+  deleteWorkflowInstance: async (instance) =>
+    httpDispatch('/api/delete-workflow-instance', 'POST', { instance }),
+  openResultsFolder: async (instance) =>
+    httpDispatch('/api/open-results-folder', 'POST', { instance }),
+  updateWorkflowInstanceStatus: async (instance) =>
+    httpDispatch('/api/update-workflow-instance-status', 'POST', { instance }),
+  openWorkFolder: async (instance, workID) =>
+    httpDispatch('/api/open-work-folder', 'POST', { instance, workID }),
+  getWorkLog: async (instance, workID, logType) =>
+    httpDispatch('/api/get-work-log', 'POST', { instance, workID, logType }),
+  getAvailableProfiles: async (instance) =>
+    httpDispatch('/api/get-available-profiles', 'POST', { instance }),
+  cloneRepo: async (repoRef) => httpDispatch('/api/clone-repo', 'POST', { repoRef }),
+  syncRepo: async (repo) => httpDispatch('/api/sync-repo', 'POST', { repo }),
+  getCollections: async () => httpDispatch('/api/get-collections', 'POST', {}),
+  getCollectionsPath: async () => httpDispatch('/api/get-collections-path', 'POST', {}),
+  setCollectionsPath: async (path) => httpDispatch('/api/set-collections-path', 'POST', { path }),
+  getContainerLogs: async (containerId) =>
+    httpDispatch('/api/get-container-logs', 'POST', { containerId }),
+  stopContainer: async (containerId) =>
+    httpDispatch('/api/stop-container', 'POST', { containerId }),
+  deleteRepo: async (repoPath) => httpDispatch('/api/delete-repo', 'POST', { repoPath }),
+  getWorkflowParams: async (repoPath) =>
+    httpDispatch('/api/get-workflow-params', 'POST', { repoPath }),
+  getWorkflowSchema: async (repoPath) =>
+    httpDispatch('/api/get-workflow-schema', 'POST', { repoPath })
 };
 
 export const API = isElectron ? electronAPI : httpAPI;
