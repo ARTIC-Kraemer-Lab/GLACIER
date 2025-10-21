@@ -13,7 +13,7 @@ export default defineConfig({
   },
 
   projects: [
-    /*{
+    {
       name: 'Web (chromium)',
       use: {
         browserName: 'chromium',
@@ -36,7 +36,7 @@ export default defineConfig({
         baseURL: 'http://localhost:3030',
         ...devices['Desktop Safari']
       }
-    },*/
+    },
     {
       name: 'Electron',
       use: {
@@ -44,10 +44,10 @@ export default defineConfig({
         ...devices['Desktop Chrome']
       }
     }
-  ]
-  /*webServer: {
+  ],
+  webServer: {
     command: 'npm run server',
     url: 'http://localhost:3030',
     reuseExistingServer: !process.env.CI
-  }*/
+  }
 });
