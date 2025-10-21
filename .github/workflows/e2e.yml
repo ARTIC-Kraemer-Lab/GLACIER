@@ -14,6 +14,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: nf-core/setup-nextflow@v1
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
@@ -32,5 +33,7 @@ jobs:
         if: ${{ !cancelled() }}
         with:
           name: playwright-report-${{ matrix.os }}
-          path: playwright-report/
-          retention-days: 30
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

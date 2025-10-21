@@ -59,7 +59,7 @@ export default function ProgressTracker({ instance, nextflowProgress, workflowSt
       <Box sx={{ flex: 1 }}>
         <Box>
           <Typography variant="h6" gutterBottom>
-            {t('monitor.progress.status')}: {t('monitor.progress.' + workflowStatus)}
+            {`${t('monitor.progress.status')}: ${t('monitor.progress.' + workflowStatus)}`}
           </Typography>
         </Box>
         <Box>
