@@ -82,6 +82,7 @@ export default function MonitorPage({ instance, logMessage }) {
       });
     };
 
+    fetchLogs(); // initial fetch
     const timerId = setInterval(fetchLogs, 1 * SECOND);
 
     return () => {

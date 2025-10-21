@@ -4,7 +4,7 @@
   "sidebar": {
     "hub": "Hub",
     "library": "Library",
-    "runs": "Runs",
+    "instances": "Instances",
     "settings": "Settings"
   },
   "hub": {
@@ -22,13 +22,22 @@
     "repo-sync-success": "Repository synced successfully",
     "repo-sync-failed": "Repository sync failed"
   },
-  "runs": {
-    "title": "Runs",
+  "instances": {
+    "title": "Instances",
     "table": {
       "status": "Status",
       "name": "Name",
-      "workflow": "Workflow"
-    }
+      "workflow": "Workflow",
+      "actions": "Actions"
+    },
+    "statuses": {
+      "created": "Created",
+      "running": "Running",
+      "completed": "Completed",
+      "closed": "Closed",
+      "failed": "Failed"
+    },
+    "delete_confirm": "Are you sure you want to delete this instance? This action cannot be undone."
   },
   "parameters": {
     "launch-workflow": "Launch Workflow"

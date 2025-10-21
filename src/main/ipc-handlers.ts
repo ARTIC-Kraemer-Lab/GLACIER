@@ -36,6 +36,10 @@ export function registerIpcHandlers() {
     return collection.killWorkflowInstance(instance);
   });
 
+  ipcMain.handle('delete-workflow-instance', async (event, instance: any) => {
+    return collection.deleteWorkflowInstance(instance);
+  });
+
   ipcMain.handle('open-results-folder', async (event, instance: any) => {
     return collection.openResultsFolder(instance);
   });

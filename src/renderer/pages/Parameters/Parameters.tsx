@@ -50,7 +50,7 @@ function TabPanel({ children, value, index }) {
   return value === index ? <Box sx={{ p: 2, flexGrow: 1 }}>{children}</Box> : null;
 }
 
-export default function ParametersPage({ instance, logMessage, setHasWorkflowRun }) {
+export default function ParametersPage({ instance, refreshInstancesList, logMessage }) {
   const { t } = useTranslation();
   const default_profile = 'standard';
 
@@ -64,7 +64,7 @@ export default function ParametersPage({ instance, logMessage, setHasWorkflowRun
     delete call_params['profile'];
     const id = await API.runWorkflow(instance, call_params, { profile: profile });
     logMessage(`Launched workflow ${instance.name}`);
-    setHasWorkflowRun(true);
+    refreshInstancesList();
   };
 
   useEffect(() => {

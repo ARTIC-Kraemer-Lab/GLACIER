@@ -4,7 +4,7 @@
   "sidebar": {
     "hub": "Hub",
     "library": "Bibliothèque",
-    "runs": "Exécutions",
+    "instances": "Instances",
     "settings": "Paramètres"
   },
   "hub": {
@@ -22,13 +22,22 @@
     "repo-sync-success": "Dépôt synchronisé avec succès",
     "repo-sync-failed": "La synchronisation du dépôt a échoué"
   },
-  "runs": {
-    "title": "Exécutions",
+  "instances": {
+    "title": "Instances",
     "table": {
       "status": "Statut",
       "name": "Nom",
-      "workflow": "Flux de travail"
-    }
+      "workflow": "Flux de travail",
+      "actions": "Actions"
+    },
+    "statuses": {
+      "created": "créé",
+      "running": "en cours",
+      "completed": "terminé",
+      "closed": "fermé",
+      "failed": "échoué"
+    },
+    "delete_confirm": "Êtes-vous sûr de vouloir supprimer cette instance ? Cette action est irréversible."
   },
   "parameters": {
     "launch-workflow": "Lancer le flux de travail"

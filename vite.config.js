@@ -8,7 +8,13 @@ export default defineConfig({
   base: './',
   build: {
     outDir: '../../dist/renderer', // Output folder for built frontend
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'src/renderer/index.html'),
+        loading: path.resolve(__dirname, 'src/renderer/loading.html')
+      }
+    }
   },
   resolve: {
     alias: {
