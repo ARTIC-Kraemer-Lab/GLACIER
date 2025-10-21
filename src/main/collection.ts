@@ -425,16 +425,19 @@ export class Collection {
     return instance;
   }
 
-  listWorkflowInstances(): IWorkflowInstance[] {
+  async listWorkflowInstances(): Promise<IWorkflowInstance[]> {
     // First, check progress of 'Running' instances
+    const updatePromises = [];
     for (const instance of this.workflow_instances) {
       if (instance.status === 'running') {
-        this.updateWorkflowInstanceStatus(instance).then((status) => {
+        const updatePromise = this.updateWorkflowInstanceStatus(instance).then((status) => {
           instance.status = status;
           this.recordRunWorkflow(instance, status);
         });
+        updatePromises.push(updatePromise);
       }
     }
+    await Promise.all(updatePromises);
     return this.workflow_instances;
   }
 

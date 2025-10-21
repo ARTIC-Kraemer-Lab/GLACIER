@@ -164,7 +164,12 @@ export default function InstancesPage({
   useEffect(() => {
     setRows(
       instancesList.map((item) =>
-        createData(item.instance.status, item.id, item.name, item.instance.workflow_version.name)
+        createData(
+          item.instance.status,
+          item.instance.id,
+          item.name,
+          item.instance.workflow_version.name
+        )
       )
     );
   }, [instancesList]);

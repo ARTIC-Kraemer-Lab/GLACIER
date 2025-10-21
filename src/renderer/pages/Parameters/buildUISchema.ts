@@ -60,7 +60,6 @@ export function buildUISchema(
     (schema.allOf ?? [])
       .map((e: any) => e?.$ref?.replace('#/$defs/', ''))
       .map((e: any) => e?.$ref?.replace('#/definitions/', ''))
-      .map((e: any) => e?.$ref?.replace('#/$defs/', ''))
       .filter(Boolean)
       .flatMap((key: string) =>
         Object.keys(

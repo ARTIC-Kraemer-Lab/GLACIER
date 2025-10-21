@@ -76,7 +76,7 @@ export default function MainPage({ darkMode, setDarkMode }) {
   const [item, setItem] = useState('');
 
   const refreshInstancesList = async () => {
-    const instances = API.listWorkflowInstances().then((instances) => {
+    API.listWorkflowInstances().then((instances) => {
       setInstancesList(
         instances.map((instance) => ({
           instance: instance,
@@ -125,7 +125,7 @@ export default function MainPage({ darkMode, setDarkMode }) {
 
   const addToInstancesList = async (repo) => {
     const workflow_id = repo.id;
-    const instance = API.createWorkflowInstance(workflow_id).then((instance) => {
+    API.createWorkflowInstance(workflow_id).then((instance) => {
       setInstancesList((prev) => {
         const newQueue = [...prev, { instance: instance, name: instance.name }];
         setView('instances');
