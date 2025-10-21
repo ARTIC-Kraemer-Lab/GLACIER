@@ -14,6 +14,7 @@ const electronAPI = isElectron
         window.electronAPI.getWorkflowInstanceParams(instance),
       cancelWorkflowInstance: (instance) => window.electronAPI.cancelWorkflowInstance(instance),
       killWorkflowInstance: (instance) => window.electronAPI.killWorkflowInstance(instance),
+      deleteWorkflowInstance: (instance) => window.electronAPI.deleteWorkflowInstance(instance),
       openResultsFolder: (instance) => window.electronAPI.openResultsFolder(instance),
       updateWorkflowInstanceStatus: (instance) =>
         window.electronAPI.updateWorkflowInstanceStatus(instance),

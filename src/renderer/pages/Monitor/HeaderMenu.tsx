@@ -145,15 +145,15 @@ export default function HeaderMenu({ instance, logMessage }) {
 
       <Paper
         sx={{
-          display: "flex",
-          flexDirection: "column",
-          px: 2,
+          display: 'flex',
+          flexDirection: 'column',
+          px: 2
         }}
       >
-        <Typography variant="h6" sx={{textAlign: 'center'}}>
+        <Typography variant="h6" sx={{ textAlign: 'center' }}>
           {instance['name']}
         </Typography>
-        <Typography variant="subtitle1" sx={{textAlign: 'center'}}>
+        <Typography variant="subtitle1" sx={{ textAlign: 'center' }}>
           {instance['workflow_version']['name']}
         </Typography>
       </Paper>

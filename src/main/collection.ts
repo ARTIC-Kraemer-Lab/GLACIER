@@ -94,6 +94,7 @@ export interface IWorkflowInstance {
   workflow_version: WorkflowVersion;
   path: string;
   params?: IWorkflowParams;
+  status?: string;
 }
 
 class WorkflowInstance implements IWorkflowInstance {
@@ -102,15 +103,24 @@ class WorkflowInstance implements IWorkflowInstance {
   workflow_version: WorkflowVersion;
   path: string;
   params?: IWorkflowParams;
+  status: string;
 
   pid: number[] = [];
 
-  constructor({ id, name, workflow_version, path, params = {} }: IWorkflowInstance) {
+  constructor({
+    id,
+    name,
+    workflow_version,
+    path,
+    status = 'created',
+    params = {}
+  }: IWorkflowInstance) {
     this.id = id;
     this.name = name;
     this.workflow_version = workflow_version;
     this.path = path;
     this.params = params;
+    this.status = status;
   }
 
   attachPID(pid: number) {
@@ -125,6 +135,19 @@ class WorkflowInstance implements IWorkflowInstance {
     } else {
       return { status: 'No log file found' };
     }
+  }
+
+  async getStatus(): Promise<string> {
+    const progress = await this.getProgress();
+    const workflow_progress = progress?.workflow;
+    // get status of last item
+    if (workflow_progress && workflow_progress.length > 0) {
+      const last = workflow_progress[workflow_progress.length - 1];
+      if (last.status) {
+        return last.status;
+      }
+    }
+    return 'unknown';
   }
 }
 
@@ -188,9 +211,9 @@ export class Collection {
 
   // --- Logic -------------------------------------------------------------------------
 
-  parseCollection() {
+  async parseCollection() {
     this.parseWorkflows();
-    this.parseInstances();
+    await this.parseInstances();
   }
 
   private parseWorkflows() {
@@ -237,7 +260,7 @@ export class Collection {
     }
   }
 
-  private parseInstances() {
+  private async parseInstances() {
     // Hierarchy: root_path/instances/owner/repo@version/instance_id/
     this.ensurePathExists(this.instances_path);
     console.log(`Parsing instances from path: ${this.instances_path}`);
@@ -261,7 +284,9 @@ export class Collection {
         }
         const wf_version = wf.versions.find((v) => v.version === version);
         if (wf_version === undefined) {
-          console.log(`Workflow version ${owner}/${repo}@${version} not found for instances, skipping.`);
+          console.log(
+            `Workflow version ${owner}/${repo}@${version} not found for instances, skipping.`
+          );
           continue;
         }
         // Parse instances
@@ -282,10 +307,10 @@ export class Collection {
     }
     // Now that the instance folder tree has been parsed, cross-reference with the
     // instance database that contains process IDs, etc.
-    this.parseInstanceDatabase();
+    await this.parseInstanceDatabase();
   }
 
-  private parseInstanceDatabase() {
+  private async parseInstanceDatabase() {
     const db_path = path.join(this.root_path, instance_database_file);
     if (!fs.existsSync(db_path)) {
       console.log('No instance database found.');
@@ -302,22 +327,27 @@ export class Collection {
       // Get latest run
       if (run.runs && run.runs.length > 0) {
         const latest_run = run.runs[run.runs.length - 1];
-        if (latest_run.pids && latest_run.pids.length > 0) {
+        instance.status = latest_run.status;
+        // If running and PIDs exist, check if still running
+        if (latest_run.status === 'running' && latest_run.pids && latest_run.pids.length > 0) {
           instance.pid = latest_run.pids;
-          for(const pid of latest_run.pids) {
+          for (const pid of latest_run.pids) {
             try {
               process.kill(pid, 0); // Check if process is running
               console.log(`Instance ${instance.id} has running PID: ${pid}`);
             } catch (e) {
-              console.log(`Instance ${instance.id} PID ${pid} is not running.`);
+              console.log(`Instance ${instance.id} PID ${pid} is not running, updating status.`);
               // Remove PID from instance
               instance.pid = instance.pid.filter((p) => p !== pid);
               // Add termination status to database
+              const progress = await instance.getStatus();
+              const status = progress || 'closed';
               run.runs.push({
                 datetime: new Date().toISOString(),
                 pids: [],
-                status: 'closed'
+                status: status
               });
+              instance.status = status;
               db_updated = true;
             }
           }
@@ -395,7 +425,19 @@ export class Collection {
     return instance;
   }
 
-  listWorkflowInstances(): IWorkflowInstance[] {
+  async listWorkflowInstances(): Promise<IWorkflowInstance[]> {
+    // First, check progress of 'Running' instances
+    const updatePromises = [];
+    for (const instance of this.workflow_instances) {
+      if (instance.status === 'running') {
+        const updatePromise = this.updateWorkflowInstanceStatus(instance).then((status) => {
+          instance.status = status;
+          this.recordRunWorkflow(instance, status);
+        });
+        updatePromises.push(updatePromise);
+      }
+    }
+    await Promise.all(updatePromises);
     return this.workflow_instances;
   }
 
@@ -515,6 +557,34 @@ export class Collection {
       }
     }
     local_instance.pid = [];
+  }
+
+  async deleteWorkflowInstance(instance: IWorkflowInstance): Promise<void> {
+    // Find instance
+    const local_instance_index = this.workflow_instances.findIndex(
+      (inst) => inst.id === instance.id
+    );
+    if (local_instance_index === -1) {
+      throw new Error(`Instance ${instance.id} not found in collection.`);
+    }
+    const local_instance = this.workflow_instances[local_instance_index];
+    // Ensure no running processes
+    if (local_instance.pid.length > 0) {
+      await this.killWorkflowInstance(instance);
+    }
+    // Delete folder
+    if (fs.existsSync(local_instance.path)) {
+      fs.rmSync(local_instance.path, { recursive: true, force: true });
+    }
+    // Remove from collection
+    this.workflow_instances.splice(local_instance_index, 1);
+    // Update database
+    const db_path = path.join(this.root_path, instance_database_file);
+    if (fs.existsSync(db_path)) {
+      let db = JSON.parse(fs.readFileSync(db_path, 'utf-8'));
+      db.runs = db.runs.filter((r: any) => r.id !== instance.id);
+      fs.writeFileSync(db_path, JSON.stringify(db, null, 2));
+    }
   }
 
   openResultsFolder(instance: IWorkflowInstance) {
@@ -681,6 +751,7 @@ export class Collection {
     if (!local_instance) {
       throw new Error(`Instance ${instance.id} not found in collection.`);
     }
+    local_instance.status = status;
     // Read database from glacier root
     const db_path = path.join(this.root_path, instance_database_file);
     let db: any = { runs: [] };

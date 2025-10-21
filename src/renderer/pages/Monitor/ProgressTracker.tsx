@@ -81,13 +81,11 @@ export default function ProgressTracker({ instance, nextflowProgress, workflowSt
                       <FolderOutlinedIcon />
                     </IconButton>
                     <IconButton onClick={() => handleOpenProcessLog(name)}>
-                    {(nextflowProgress[name]['work'] === workID && showWork) ?
-                      (
+                      {nextflowProgress[name]['work'] === workID && showWork ? (
                         <DescriptionIcon color="primary" />
                       ) : (
                         <DescriptionOutlinedIcon />
-                      )
-                    }
+                      )}
                     </IconButton>
                   </>
                 )}

@@ -20,21 +20,21 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import HubIcon from '@mui/icons-material/Hub';
 import LibraryIcon from '@mui/icons-material/Apps';
-import RunsIcon from '@mui/icons-material/Storage';
+import InstancesIcon from '@mui/icons-material/Storage';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import { useTranslation } from 'react-i18next';
 
 import HubPage from './Hub';
 import LibraryPage from './Library';
-import RunsPage from './Runs';
+import InstancesPage from './Instances';
 import SettingsPage from './Settings';
 import { API } from '../services/api.js';
 
 const defaultRepoUrl = 'jsbrittain/workflow-runner-testworkflow';
 const defaultImageName = 'testworkflow';
 
-type navbar_page = 'hub' | 'library' | 'runs' | 'settings';
+type navbar_page = 'hub' | 'library' | 'instances' | 'settings';
 type severityLevels = 'info' | 'success' | 'warning' | 'error';
 
 // Quick function to predict target directory based on repo URL and base collections path
@@ -68,25 +68,29 @@ export default function MainPage({ darkMode, setDarkMode }) {
   const [output, setOutput] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [view, setView] = useState<navbar_page>('hub');
-  const [launcherQueue, setLauncherQueue] = useState([]);
-  const [selectedLauncherTab, setSelectedLauncherTab] = useState(0);
+  const [instancesList, setInstancesList] = useState([]);
   const [log, setLog] = useState([]);
   const [severity, setSeverity] = useState<severityLevels>('info');
   const [message, setMessage] = useState('');
   const [open, setOpen] = useState(false);
   const [item, setItem] = useState('');
 
-  useEffect(() => {
-    (async () => {
-      const path = await API.getCollectionsPath();
-      setCollectionsPath(path);
-      const instances = await API.listWorkflowInstances();
-      setLauncherQueue(
+  const refreshInstancesList = async () => {
+    API.listWorkflowInstances().then((instances) => {
+      setInstancesList(
         instances.map((instance) => ({
           instance: instance,
           name: instance.name
         }))
       );
+    });
+  };
+
+  useEffect(() => {
+    (async () => {
+      const path = await API.getCollectionsPath();
+      setCollectionsPath(path);
+      refreshInstancesList();
     })();
   }, []);
 
@@ -119,17 +123,15 @@ export default function MainPage({ darkMode, setDarkMode }) {
     return newName;
   };
 
-  const addToLauncherQueue = async (repo) => {
+  const addToInstancesList = async (repo) => {
     const workflow_id = repo.id;
-    const instance = await API.createWorkflowInstance(workflow_id);
-    const wf_ver = instance.workflow_version;
-
-    setLauncherQueue((prev) => {
-      const newQueue = [...prev, { instance: instance, name: instance.name }];
-      setSelectedLauncherTab(newQueue.length - 1);
-      setView('runs');
-      setItem(instance.id);
-      return newQueue;
+    API.createWorkflowInstance(workflow_id).then((instance) => {
+      setInstancesList((prev) => {
+        const newQueue = [...prev, { instance: instance, name: instance.name }];
+        setView('instances');
+        setItem(instance.id);
+        return newQueue;
+      });
     });
   };
 
@@ -196,16 +198,16 @@ export default function MainPage({ darkMode, setDarkMode }) {
           </ListItem>
           <ListItem
             button
-            id="sidebar-runs-button"
+            id="sidebar-instances-button"
             onClick={() => {
               setItem('');
-              setView('runs');
+              setView('instances');
             }}
           >
             <ListItemIcon>
-              <RunsIcon />
+              <InstancesIcon />
             </ListItemIcon>
-            {drawerOpen && <ListItemText primary={t('sidebar.runs')} />}
+            {drawerOpen && <ListItemText primary={t('sidebar.instances')} />}
           </ListItem>
           <ListItem button id="sidebar-settings-button" onClick={() => setView('settings')}>
             <ListItemIcon>
@@ -244,15 +246,13 @@ export default function MainPage({ darkMode, setDarkMode }) {
             setTargetDir={setTargetDir}
             setFolderPath={setFolderPath}
             drawerOpen={drawerOpen}
-            addToLauncherQueue={addToLauncherQueue}
+            addToInstancesList={addToInstancesList}
             logMessage={logMessage}
           />
-        ) : view === 'runs' ? (
-          <RunsPage
-            launcherQueue={launcherQueue}
-            setLauncherQueue={setLauncherQueue}
-            selectedTab={selectedLauncherTab}
-            setSelectedTab={setSelectedLauncherTab}
+        ) : view === 'instances' ? (
+          <InstancesPage
+            instancesList={instancesList}
+            refreshInstancesList={refreshInstancesList}
             logMessage={logMessage}
             item={item}
             setItem={setItem}

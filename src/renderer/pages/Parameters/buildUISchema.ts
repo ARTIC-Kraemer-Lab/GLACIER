@@ -2,7 +2,7 @@ import type { UISchemaElement } from '@jsonforms/core';
 
 type JSONSchema = any;
 
-// Build a JSON Forms UI schema with Categories from `definitions`/`allOf`
+// Build a JSON Forms UI schema with Categories from `definitions`/`$defs`/`allOf`
 export function buildUISchema(
   schema: JSONSchema,
   opts?: {
@@ -15,8 +15,7 @@ export function buildUISchema(
     .map((entry: any) => {
       const ref: string | undefined = entry?.$ref;
       if (!ref) return null;
-      if (!ref.startsWith('#/$defs/') && !ref.startsWith('#/definitions/'))
-        return null;
+      if (!ref.startsWith('#/$defs/') && !ref.startsWith('#/definitions/')) return null;
 
       let defKey = ref.replace('#/definitions/', '');
       defKey = defKey.replace('#/$defs/', '');
@@ -62,10 +61,11 @@ export function buildUISchema(
       .map((e: any) => e?.$ref?.replace('#/$defs/', ''))
       .map((e: any) => e?.$ref?.replace('#/definitions/', ''))
       .filter(Boolean)
-      .flatMap((key: string) => Object.keys(
-        (schema.$defs?.[key]?.properties ?? {}) ||
-        (schema.definitions?.[key]?.properties ?? {})
-      ))
+      .flatMap((key: string) =>
+        Object.keys(
+          (schema.$defs?.[key]?.properties ?? {}) || (schema.definitions?.[key]?.properties ?? {})
+        )
+      )
   );
 
   const rootProps = Object.keys(schema.properties ?? {}).filter((k) => {

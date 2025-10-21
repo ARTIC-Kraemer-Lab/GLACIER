@@ -44,7 +44,7 @@ export default defineConfig({
         ...devices['Desktop Chrome']
       }
     }
-  ],
+  ]
   /*webServer: {
     command: 'npm run server',
     url: 'http://localhost:3030',
