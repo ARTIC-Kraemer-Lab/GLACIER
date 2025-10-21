@@ -45,6 +45,7 @@ export default function SettingsPage({
       />
 
       <TextField
+        id="settings-collections-path"
         label={t('settings.collections-path')}
         fullWidth
         value={collectionsPath}
