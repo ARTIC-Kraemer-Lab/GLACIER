@@ -35,7 +35,7 @@ test('clone a repository', async ({ page }) => {
   // Set library path to a temporary folder
   const glacier_path = path.resolve(path.join(os.tmpdir(), 'GLACIER-' + Date.now().toString()));
   fs.rmSync(glacier_path, { recursive: true, force: true });
-  expect(!fs.existsSync(glacier_path));
+  expect(fs.existsSync(glacier_path)).toBe(false);
   const library_path = path.resolve(path.join(glacier_path, 'library'));
   fs.mkdirSync(library_path, { recursive: true }); // rebuild
   await page.fill('#settings-collections-path', `${library_path}`);
@@ -137,32 +137,3 @@ test('launch local workflow', async ({ page }) => {
     timeout: TIMEOUT_30s
   });
 });
-
-test(
-  'launch local workflow',
-  async ({ page }) => {
-    // --- Navigate to Library page
-    await page.click('#sidebar-library-button');
-    const repo_name = 'sleep';
-
-    // Find the cloned workflow
-    await expect(page.locator('h6').filter({ hasText: repo_name })).toBeVisible({
-      timeout: TIMEOUT_10s
-    });
-
-    // Create an instance of the workflow (redirects to Parameters page)
-    await page.click(`#collections-run-${cssEscape(repo_name)}`);
-
-    // Set sleep time parameter
-    await page.getByLabel('Sleep Time').fill('5'); // 5 second sleep
-    await page.getByLabel('Sleep Time').blur();
-
-    // Launch workflow
-    await page.getByRole('button', { name: 'Launch Workflow' }).click();
-
-    // Check that workflow completes (3 second workflow)
-    await expect(page.locator('h6').filter({ hasText: 'Status: Completed' })).toBeVisible({
-      timeout: TIMEOUT_30s
-    });
-  }
-);
