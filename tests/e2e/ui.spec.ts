@@ -17,6 +17,7 @@ const TIMEOUT_10s = 10_000;
 const TIMEOUT_30s = 30_000;
 const TIMEOUT_60s = 60_000;
 
+
 async function waitForLogLine(page: Page, text: string | RegExp, timeout = 60000) {
   await expect(page.locator('#logMessage > p').filter({ hasText: text })).toBeVisible({ timeout });
 }
@@ -136,3 +137,32 @@ test('launch local workflow', async ({ page }) => {
     timeout: TIMEOUT_30s
   });
 });
+
+test(
+  'launch local workflow',
+  async ({ page }) => {
+    // --- Navigate to Library page
+    await page.click('#sidebar-library-button');
+    const repo_name = 'sleep';
+
+    // Find the cloned workflow
+    await expect(page.locator('h6').filter({ hasText: repo_name })).toBeVisible({
+      timeout: TIMEOUT_10s
+    });
+
+    // Create an instance of the workflow (redirects to Parameters page)
+    await page.click(`#collections-run-${cssEscape(repo_name)}`);
+
+    // Set sleep time parameter
+    await page.getByLabel('Sleep Time').fill('5'); // 5 second sleep
+    await page.getByLabel('Sleep Time').blur();
+
+    // Launch workflow
+    await page.getByRole('button', { name: 'Launch Workflow' }).click();
+
+    // Check that workflow completes (3 second workflow)
+    await expect(page.locator('h6').filter({ hasText: 'Status: Completed' })).toBeVisible({
+      timeout: TIMEOUT_30s
+    });
+  }
+);
