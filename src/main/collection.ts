@@ -217,6 +217,8 @@ export class Collection {
   }
 
   private parseWorkflows() {
+    // Clean existing workflows
+    this.workflows = [];
     // Hierarchy: root_path/workflows/owner/repo@version/    with version=tag or branch
     this.ensurePathExists(this.workflow_path);
     console.log(`Parsing collection from path: ${this.workflow_path}`);
@@ -261,6 +263,8 @@ export class Collection {
   }
 
   private async parseInstances() {
+    // Clean existing instances
+    this.workflow_instances = [];
     // Hierarchy: root_path/instances/owner/repo@version/instance_id/
     this.ensurePathExists(this.instances_path);
     console.log(`Parsing instances from path: ${this.instances_path}`);
@@ -698,7 +702,7 @@ export class Collection {
     // Check if version already exists
     let version = wf.versions.find((v) => v.version === repo.version);
     if (version !== undefined) {
-      throw new Error(`Workflow ${wf_id}@{repo.version} already exists.`);
+      throw new Error(`Workflow ${wf_id}@${repo.version} already exists.`);
     }
     version = new WorkflowVersion({
       id: `${wf_id}@${repo.version}`,
@@ -713,9 +717,11 @@ export class Collection {
     return version;
   }
 
-  setCollectionsPath(path: string) {
+  async setCollectionsPath(path: string) {
     this.root_path = path;
     store.set('collectionsPath', path);
+    // Reparse collection
+    await this.parseCollection();
   }
 
   getCollections(): IRepo[] {

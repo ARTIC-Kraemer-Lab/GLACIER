@@ -263,6 +263,7 @@ export default function MainPage({ darkMode, setDarkMode }) {
             setDarkMode={setDarkMode}
             collectionsPath={collectionsPath}
             setCollectionsPath={setCollectionsPath}
+            refreshInstancesList={refreshInstancesList}
           />
         ) : null}
       </Box>
