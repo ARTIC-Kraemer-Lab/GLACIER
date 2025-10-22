@@ -32,7 +32,7 @@ export interface IWorkflowVersion {
   type: IWorkflowType;
   version: string | undefined; // github tag, undefined for local
   path: string;
-  parent?: IWorkflow; // reference to parent workflow
+  parent_id: string; // reference to parent workflow
 }
 
 class WorkflowVersion implements IWorkflowVersion {
@@ -41,15 +41,15 @@ class WorkflowVersion implements IWorkflowVersion {
   type: IWorkflowType;
   version: string | undefined;
   path: string;
-  parent?: IWorkflow; // reference to parent workflow
+  parent_id: string; // reference to parent workflow
 
-  constructor({ id, name, type, version, path, parent }: IWorkflowVersion) {
+  constructor({ id, name, type, version, path, parent_id }: IWorkflowVersion) {
     this.id = id;
     this.name = name;
     this.type = type;
     this.version = version;
     this.path = path;
-    this.parent = parent;
+    this.parent_id = parent_id;
   }
 }
 
@@ -217,6 +217,8 @@ export class Collection {
   }
 
   private parseWorkflows() {
+    // Clean existing workflows
+    this.workflows = [];
     // Hierarchy: root_path/workflows/owner/repo@version/    with version=tag or branch
     this.ensurePathExists(this.workflow_path);
     console.log(`Parsing collection from path: ${this.workflow_path}`);
@@ -254,13 +256,15 @@ export class Collection {
           type: type,
           version: version,
           path: versionPath,
-          parent: wf
+          parent_id: wf.id
         } as WorkflowVersion);
       }
     }
   }
 
   private async parseInstances() {
+    // Clean existing instances
+    this.workflow_instances = [];
     // Hierarchy: root_path/instances/owner/repo@version/instance_id/
     this.ensurePathExists(this.instances_path);
     console.log(`Parsing instances from path: ${this.instances_path}`);
@@ -698,7 +702,7 @@ export class Collection {
     // Check if version already exists
     let version = wf.versions.find((v) => v.version === repo.version);
     if (version !== undefined) {
-      throw new Error(`Workflow ${wf_id}@{repo.version} already exists.`);
+      throw new Error(`Workflow ${wf_id}@${repo.version} already exists.`);
     }
     version = new WorkflowVersion({
       id: `${wf_id}@${repo.version}`,
@@ -706,19 +710,21 @@ export class Collection {
       type: this.determineWorkflowType(repo.path),
       version: repo.version,
       path: repo.path,
-      parent: wf
+      parent_id: wf.id
     });
     wf.versions.push(version);
     this.workflows.push(wf);
     return version;
   }
 
-  setCollectionsPath(path: string) {
+  async setCollectionsPath(path: string) {
     this.root_path = path;
     store.set('collectionsPath', path);
+    // Reparse collection
+    await this.parseCollection();
   }
 
-  getWorkflowsList(): IRepo[] {
+  getCollections(): IRepo[] {
     return this.workflows.map((wf) => ({
       id: wf.id,
       name: wf.name,

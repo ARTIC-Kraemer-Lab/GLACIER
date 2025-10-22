@@ -5,7 +5,7 @@ export default defineConfig({
   fullyParallel: false, // tests inside a file must run sequentially
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1, // tests rebuild workflow library, so must run sequentially
   reporter: 'html',
   use: {
     baseURL: 'http://localhost:3030',
@@ -15,7 +15,7 @@ export default defineConfig({
   },
 
   projects: [
-    /*{
+    {
       name: 'Web (chromium)',
       use: {
         browserName: 'chromium',
@@ -38,7 +38,7 @@ export default defineConfig({
         baseURL: 'http://localhost:3030',
         ...devices['Desktop Safari']
       }
-    },*/
+    },
     {
       name: 'Electron',
       use: {
@@ -46,10 +46,10 @@ export default defineConfig({
         ...devices['Desktop Chrome']
       }
     }
-  ]
-  /*webServer: {
+  ],
+  webServer: {
     command: 'npm run server',
     url: 'http://localhost:3030',
     reuseExistingServer: !process.env.CI
-  }*/
+  }
 });

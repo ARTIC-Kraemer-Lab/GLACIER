@@ -73,7 +73,7 @@ export function registerIpcHandlers() {
   });
 
   ipcMain.handle('get-collections', async () => {
-    return collection.getWorkflowsList();
+    return collection.getCollections();
   });
 
   ipcMain.handle('run-workflow', async (event, instance, params, opts) => {
