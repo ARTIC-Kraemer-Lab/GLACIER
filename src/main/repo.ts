@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import yaml from 'js-yaml';
 import git from 'isomorphic-git';
-import http from 'isomorphic-git/http/node/index.cjs';
+import http from 'isomorphic-git/http/node';
 import { IRepo } from './types.js';
 import { uniqueNamesGenerator, adjectives, animals } from 'unique-names-generator';
 

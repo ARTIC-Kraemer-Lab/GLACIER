@@ -9,7 +9,7 @@ import { generateUniqueName } from './repo.js';
 import { cloneRepo, ICloneRepo } from './repo.js';
 import { runWorkflow } from './runner.js';
 import { syncRepo, getWorkflowParams, getWorkflowSchema } from './repo.js';
-import { getCollectionsPath, getDefaultCollectionsDir } from './paths.js';
+import { getCollectionsPath, getDefaultCollectionsDir, locateReports } from './paths.js';
 import store from './store.js';
 
 // Should remove imports from specific runners
@@ -812,5 +812,9 @@ export class Collection {
       console.log(`Log file ${logFile} does not exist.`);
       return '';
     }
+  }
+
+  getInstanceReportsList(instance: IWorkflowInstance): Record<string, string>[] {
+    return locateReports(instance.path);
   }
 }

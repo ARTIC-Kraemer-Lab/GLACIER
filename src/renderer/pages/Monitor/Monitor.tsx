@@ -8,6 +8,8 @@ import DoneIcon from '@mui/icons-material/Done';
 import CancelIcon from '@mui/icons-material/Cancel';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import AnsiLog from './AnsiLog.js';
+import HtmlReports from './HtmlReports.js';
+import LogsPage from './Logs.js';
 import { API } from '../../services/api.js';
 import { useTranslation } from 'react-i18next';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
@@ -99,9 +101,8 @@ export default function MonitorPage({ instance, logMessage }) {
       <HeaderMenu instance={instance} logMessage={logMessage} />
       <Tabs value={tabSelected} onChange={handleTabChange}>
         <Tab label={t('monitor.progress.title')} />
-        <Tab label={t('monitor.stdout')} />
-        <Tab label={t('monitor.stderr')} />
-        <Tab label={t('monitor.nextflow-log')} />
+        <Tab label={t('monitor.logs.title')} />
+        <Tab label={t('monitor.reports')} />
       </Tabs>
       <TabPanel value={tabSelected} index={0}>
         <ProgressTracker
@@ -111,13 +112,16 @@ export default function MonitorPage({ instance, logMessage }) {
         />
       </TabPanel>
       <TabPanel value={tabSelected} index={1}>
-        <AnsiLog text={stdOut} />
+        <LogsPage
+          instance={instance}
+          stdOut={stdOut}
+          stdErr={stdErr}
+          nextflowLog={nextflowLog}
+          logMessage={logMessage}
+        />
       </TabPanel>
       <TabPanel value={tabSelected} index={2}>
-        <AnsiLog text={stdErr} />
-      </TabPanel>
-      <TabPanel value={tabSelected} index={3}>
-        <AnsiLog text={nextflowLog} />
+        <HtmlReports instance={instance} />
       </TabPanel>
     </Paper>
   );

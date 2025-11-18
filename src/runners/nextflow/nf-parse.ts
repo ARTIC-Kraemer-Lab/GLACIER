@@ -31,7 +31,7 @@ const RES = [
 
 const DEBUG = process.env.DEBUG === '1';
 
-export async function parseNextflowLog(path: string) {
+export async function readNextflowLog(path: string) {
   const rl = readline.createInterface({
     input: fs.createReadStream(path, { encoding: 'utf8' }),
     crlfDelay: Infinity
@@ -55,8 +55,14 @@ export async function parseNextflowLog(path: string) {
       matched = true;
       anyOutput = true;
 
+      const process_label = m[1];
+
       // Strip trailing brackets from process names (e.g. "foo (2)" -> "foo")
-      if (m[1]) m[1] = m[1].replace(/\s*\(.*\)$/, '');
+      let process_group = '';
+      if (process_label) {
+        // process_label can be empty for wf_done
+        process_group = process_label.replace(/\s*\(.*\)$/, '');
+      }
 
       const safeCreate = (obj: any, key: string) => {
         if (!obj['process'][key]) obj['process'][key] = [];
@@ -64,24 +70,45 @@ export async function parseNextflowLog(path: string) {
 
       switch (r.t) {
         case 'created':
-          safeCreate(progress, m[1]);
-          progress['process'][m[1]].push({ time: ts, status: 'created' });
+          safeCreate(progress, process_label);
+          progress['process'][process_label].push({
+            time: ts,
+            group: process_group,
+            status: 'created'
+          });
           break;
         case 'starting':
-          safeCreate(progress, m[1]);
-          progress['process'][m[1]].push({ time: ts, status: 'starting' });
+          safeCreate(progress, process_label);
+          progress['process'][process_label].push({
+            time: ts,
+            group: process_group,
+            status: 'starting'
+          });
           break;
         case 'submitted':
           safeCreate(progress, m[2]);
-          progress['process'][m[2]].push({ time: ts, status: 'submitted', work: m[1] });
+          progress['process'][m[2]].push({
+            time: ts,
+            group: process_group,
+            status: 'submitted',
+            work: process_label
+          });
           break;
         case 'completed':
-          safeCreate(progress, m[1]);
-          progress['process'][m[1]].push({ time: ts, status: 'completed', result: m[2] });
+          safeCreate(progress, process_label);
+          progress['process'][process_label].push({
+            time: ts,
+            group: process_group,
+            status: 'completed'
+          });
           break;
         case 'error':
-          safeCreate(progress, m[1]);
-          progress['process'][m[1]].push({ time: ts, status: 'error' });
+          safeCreate(progress, process_label);
+          progress['process'][process_label].push({
+            time: ts,
+            group: process_group,
+            status: 'error'
+          });
           break;
         case 'aborted':
           progress['workflow'].push({ time: ts, status: 'aborted', cause: m[1] });
@@ -99,5 +126,10 @@ export async function parseNextflowLog(path: string) {
     }
   }
 
+  return progress;
+}
+
+export async function parseNextflowLog(path: string) {
+  const progress = await readNextflowLog(path);
   return progress;
 }

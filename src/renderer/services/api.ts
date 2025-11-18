@@ -18,6 +18,9 @@ const electronAPI = isElectron
       openResultsFolder: (instance) => window.electronAPI.openResultsFolder(instance),
       updateWorkflowInstanceStatus: (instance) =>
         window.electronAPI.updateWorkflowInstanceStatus(instance),
+      getInstanceReportsList: (instance) => window.electronAPI.getInstanceReportsList(instance),
+      getInstanceReport: (instance, reportFile) =>
+        window.electronAPI.getInstanceReport(instance, reportFile),
       openWorkFolder: (instance, workID) => window.electronAPI.openWorkFolder(instance, workID),
       getWorkLog: (instance, workID, logType) =>
         window.electronAPI.getWorkLog(instance, workID, logType),
@@ -69,6 +72,10 @@ const httpAPI = {
     httpDispatch('/api/open-results-folder', 'POST', { instance }),
   updateWorkflowInstanceStatus: async (instance) =>
     httpDispatch('/api/update-workflow-instance-status', 'POST', { instance }),
+  getInstanceReportsList: async (instance) =>
+    httpDispatch('/api/get-instance-reports-list', 'POST', { instance }),
+  getInstanceReport: async (instance, reportFile) =>
+    httpDispatch('/api/get-instance-report', 'POST', { instance, reportFile }),
   openWorkFolder: async (instance, workID) =>
     httpDispatch('/api/open-work-folder', 'POST', { instance, workID }),
   getWorkLog: async (instance, workID, logType) =>

@@ -43,9 +43,14 @@
     "launch-workflow": "Lancer le flux de travail"
   },
   "monitor": {
-    "stdout": "Sortie standard",
-    "stderr": "Erreur standard",
-    "nextflow-log": "Journal Nextflow",
+    "logs": {
+      "title": "Journaux",
+      "stdout": "Sortie standard",
+      "stderr": "Erreur standard",
+      "nextflow-log": "Journal Nextflow"
+    },
+    "reports": "Rapports",
+    "select-report": "Sélectionner le rapport",
     "execution": {
       "actions": "Actions",
       "cancel": "Annuler",
