@@ -54,13 +54,26 @@ export default function ProgressTracker({ instance, nextflowProgress, workflowSt
     return () => clearInterval(interval);
   }, [showWork]);
 
+  const FormatWorkflowStatus = ({ workflowStatus: string }) => {
+    let color_palette = 'info';
+    console.log('workflowStatus', workflowStatus);
+    if (workflowStatus === 'aborted') {
+      color_palette = 'error';
+    } else if (workflowStatus === 'completed') {
+      color_palette = 'success';
+    }
+    return (
+      <Typography variant="h6" color={color_palette} gutterBottom>
+        {`${t('monitor.progress.' + workflowStatus)}`}
+      </Typography>
+    );
+  };
+
   return (
     <Box sx={{ display: 'flex', gap: 2 }}>
       <Box sx={{ flex: 1 }}>
         <Box>
-          <Typography variant="h6" gutterBottom>
-            {`${t('monitor.progress.status')}: ${t('monitor.progress.' + workflowStatus)}`}
-          </Typography>
+          <FormatWorkflowStatus workflowStatus={workflowStatus} />
         </Box>
         <Box>
           {

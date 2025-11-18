@@ -48,6 +48,10 @@ export function registerIpcHandlers() {
     return collection.updateWorkflowInstanceStatus(instance);
   });
 
+  ipcMain.handle('get-instance-reports-list', async (event, instance: any) => {
+    return collection.getInstanceReportsList(instance);
+  });
+
   ipcMain.handle('open-work-folder', async (event, instance: any, work_id: string) => {
     return collection.openWorkFolder(instance, work_id);
   });

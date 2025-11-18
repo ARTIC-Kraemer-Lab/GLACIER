@@ -14,28 +14,28 @@ export function getCollectionsPath(): string {
   return store.get('collectionsPath') || getDefaultCollectionsDir();
 }
 
-/*
-export function listCollections(): IRepo[] {
-  const base = getCollectionsPath();
-  const repos: IRepo[] = [];
-
-  if (!fs.existsSync(base)) return repos;
-
-  const owners = fs.readdirSync(base);
-  for (const owner of owners) {
-    const ownerPath = path.join(base, owner);
-    if (!fs.statSync(ownerPath).isDirectory()) continue;
-
-    const repoDirs = fs.readdirSync(ownerPath);
-    for (const repo of repoDirs) {
-      const repoPath = path.join(ownerPath, repo);
-      if (fs.statSync(repoPath).isDirectory()) {
-        const url = `${owner}/${repo}`;
-        repos.push({ name: url, path: repoPath, url: url });
+export function locateReports(reportsDir: string): Record<string, string>[] {
+  // Look through folders recursively for HTML outputs
+  if (!fs.existsSync(reportsDir)) {
+    throw new Error(`Reports directory does not exist: ${reportsDir}`);
+  }
+  const reportFiles: Record<string, string>[] = [];
+  function walkDir(currentPath: string) {
+    const files = fs.readdirSync(currentPath);
+    for (const file of files) {
+      const fullPath = path.join(currentPath, file);
+      const stat = fs.lstatSync(fullPath);
+      if (stat.isDirectory()) {
+        walkDir(fullPath);
+      } else if (stat.isFile() && path.extname(file).toLowerCase() === '.html') {
+        reportFiles.push({
+          id: (reportFiles.length + 1).toString(),
+          name: path.basename(file, '.html'),
+          path: fullPath
+        });
       }
     }
   }
-
-  return repos;
+  walkDir(reportsDir);
+  return reportFiles;
 }
-*/

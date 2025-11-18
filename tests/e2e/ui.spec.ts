@@ -17,7 +17,6 @@ const TIMEOUT_10s = 10_000;
 const TIMEOUT_30s = 30_000;
 const TIMEOUT_60s = 60_000;
 
-
 async function waitForLogLine(page: Page, text: string | RegExp, timeout = 60000) {
   await expect(page.locator('#logMessage > p').filter({ hasText: text })).toBeVisible({ timeout });
 }
@@ -133,7 +132,7 @@ test('launch local workflow', async ({ page }) => {
   await page.getByRole('button', { name: 'Launch Workflow' }).click();
 
   // Check that workflow completes (3 second workflow)
-  await expect(page.locator('h6').filter({ hasText: 'Status: Completed' })).toBeVisible({
+  await expect(page.locator('h6').filter({ hasText: 'Completed' })).toBeVisible({
     timeout: TIMEOUT_30s
   });
 });
