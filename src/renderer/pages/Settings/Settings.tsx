@@ -10,7 +10,7 @@ import {
   MenuItem,
   Paper,
   Tab,
-  Tabs,
+  Tabs
 } from '@mui/material';
 import ProjectsList from './ProjectsList.js';
 import { API } from '../../services/api.js';
@@ -65,14 +65,14 @@ export default function SettingsPage({
         )}
       </Box>
     );
-  }
+  };
 
   return (
     <Paper
       sx={{
         flexGrow: 1,
         display: 'flex',
-        height: '100%',
+        height: '100%'
       }}
     >
       <Tabs
