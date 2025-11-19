@@ -16,7 +16,6 @@ export default function SettingsPage({
   setDarkMode,
   collectionsPath,
   setCollectionsPath,
-  refreshInstancesList
 }) {
   const { t, i18n } = useTranslation();
 
@@ -25,9 +24,6 @@ export default function SettingsPage({
   const handlePathChange = (e) => {
     const newPath = e.target.value;
     setCollectionsPath(newPath);
-    API.setCollectionsPath(newPath).then(() => {
-      refreshInstancesList();
-    });
   };
 
   const handleLanguageChange = (e) => {
