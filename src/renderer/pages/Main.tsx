@@ -17,6 +17,8 @@ import {
   Paper,
   Alert
 } from '@mui/material';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import Toolbar from '@mui/material/Toolbar';
 import MenuIcon from '@mui/icons-material/Menu';
 import HubIcon from '@mui/icons-material/Hub';
 import LibraryIcon from '@mui/icons-material/Apps';
@@ -136,7 +138,7 @@ export default function MainPage({ darkMode, setDarkMode }) {
   };
 
   const logMessage = (text, level: severityLevels = 'info') => {
-    setLog((prev) => [...prev.slice(-9), text]);
+    setLog((prevLog) => [...prevLog, text]);
     setMessage(text);
     setSeverity(level);
     setOpen(true);
@@ -218,91 +220,81 @@ export default function MainPage({ darkMode, setDarkMode }) {
         </List>
       </Drawer>
 
-      {/* Reserve space for the fixed log panel at the bottom */}
-      <Box
-        component="main"
-        sx={(theme) => ({
-          flexGrow: 1,
-          p: 3,
-          mt: 8, // below AppBar
-          pb: `calc(120px + ${theme.spacing(2)})` // make room for the 120px log panel + a little spacing
-        })}
-      >
-        {view === 'hub' ? (
-          <HubPage
-            repoUrl={repoUrl}
-            setRepoUrl={setRepoUrl}
-            targetDir={targetDir}
-            setTargetDir={setTargetDir}
-            setFolderPath={setFolderPath}
-            drawerOpen={drawerOpen}
-            logMessage={logMessage}
-          />
-        ) : view === 'library' ? (
-          <LibraryPage
-            repoUrl={repoUrl}
-            setRepoUrl={setRepoUrl}
-            targetDir={targetDir}
-            setTargetDir={setTargetDir}
-            setFolderPath={setFolderPath}
-            drawerOpen={drawerOpen}
-            addToInstancesList={addToInstancesList}
-            logMessage={logMessage}
-          />
-        ) : view === 'instances' ? (
-          <InstancesPage
-            instancesList={instancesList}
-            refreshInstancesList={refreshInstancesList}
-            logMessage={logMessage}
-            item={item}
-            setItem={setItem}
-          />
-        ) : view === 'settings' ? (
-          <SettingsPage
-            darkMode={darkMode}
-            setDarkMode={setDarkMode}
-            collectionsPath={collectionsPath}
-            setCollectionsPath={setCollectionsPath}
-            refreshInstancesList={refreshInstancesList}
-          />
-        ) : null}
-      </Box>
+      <PanelGroup direction="vertical" style={{ height: '100vh', width: '100%' }}>
+        <Panel defaultSize={96}>
+          <Paper
+            variant="outlined"
+            sx={{ width: '100%', height: '100%', overflowY: 'auto', minHeight: 0, p: 3 }}
+            square
+          >
+            <Toolbar />
+            {view === 'hub' ? (
+              <HubPage
+                repoUrl={repoUrl}
+                setRepoUrl={setRepoUrl}
+                targetDir={targetDir}
+                setTargetDir={setTargetDir}
+                setFolderPath={setFolderPath}
+                drawerOpen={drawerOpen}
+                logMessage={logMessage}
+              />
+            ) : view === 'library' ? (
+              <LibraryPage
+                repoUrl={repoUrl}
+                setRepoUrl={setRepoUrl}
+                targetDir={targetDir}
+                setTargetDir={setTargetDir}
+                setFolderPath={setFolderPath}
+                drawerOpen={drawerOpen}
+                addToInstancesList={addToInstancesList}
+                logMessage={logMessage}
+              />
+            ) : view === 'instances' ? (
+              <InstancesPage
+                instancesList={instancesList}
+                refreshInstancesList={refreshInstancesList}
+                logMessage={logMessage}
+                item={item}
+                setItem={setItem}
+              />
+            ) : view === 'settings' ? (
+              <SettingsPage
+                darkMode={darkMode}
+                setDarkMode={setDarkMode}
+                collectionsPath={collectionsPath}
+                setCollectionsPath={setCollectionsPath}
+                refreshInstancesList={refreshInstancesList}
+              />
+            ) : null}
+          </Paper>
+        </Panel>
 
-      <Paper
-        variant="outlined"
-        sx={(theme) => ({
-          position: 'fixed',
-          bottom: 0,
-          left: drawerOpen ? 240 : 56,
-          right: 0,
-          height: 120,
-          overflowY: 'auto',
-          bgcolor: 'background.default',
-          px: 2,
-          py: 1,
-          borderTop: '1px solid rgba(0,0,0,0.12)',
-          transition: theme.transitions.create('left', {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.enteringScreen
-          })
-        })}
-      >
-        <Box
-          id="logMessage"
-          component="pre"
-          sx={{ m: 0, fontSize: '0.75rem', whiteSpace: 'pre-wrap' }}
-        >
-          {log.map((line, index) => (
-            <Typography
-              key={index}
-              variant="body2"
-              color={severity === 'error' ? 'error.main' : 'text.primary'}
+        <PanelResizeHandle />
+
+        <Panel defaultSize={4}>
+          <Paper
+            variant="outlined"
+            sx={{ width: '100%', height: '100%', overflowY: 'auto' }}
+            square
+          >
+            <Box
+              id="logMessage"
+              component="pre"
+              sx={{ m: 0, fontSize: '0.75rem', whiteSpace: 'pre-wrap' }}
             >
-              {line}
-            </Typography>
-          ))}
-        </Box>
-      </Paper>
+              {log.map((line, index) => (
+                <Typography
+                  key={index}
+                  variant="body2"
+                  color={severity === 'error' ? 'error.main' : 'text.primary'}
+                >
+                  {line}
+                </Typography>
+              ))}
+            </Box>
+          </Paper>
+        </Panel>
+      </PanelGroup>
 
       <Snackbar open={open} autoHideDuration={3000} onClose={() => setOpen(false)}>
         <Alert onClose={() => setOpen(false)} severity={severity} sx={{ width: '100%' }}>
