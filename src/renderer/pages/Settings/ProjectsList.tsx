@@ -65,6 +65,12 @@ export default function ProjectsList({ projectsList, getProjectsList, logMessage
         );
       })}
 
+      {projectsList.length < 2 && (
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          {t('settings.projects.no-projects')}
+        </Typography>
+      )}
+
       <TextField
         label={t('settings.projects.url')}
         fullWidth

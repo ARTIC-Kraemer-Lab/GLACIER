@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Box,
   Container,
   Typography,
   Switch,
@@ -7,7 +8,9 @@ import {
   TextField,
   Select,
   MenuItem,
-  Paper
+  Paper,
+  Tab,
+  Tabs,
 } from '@mui/material';
 import ProjectsList from './ProjectsList.js';
 import { API } from '../../services/api.js';
@@ -28,6 +31,7 @@ export default function SettingsPage({
   const { t, i18n } = useTranslation();
 
   const [language, setLanguage] = React.useState(i18n.language || 'en');
+  const [tabValue, setTabValue] = React.useState(0);
 
   const handlePathChange = (e) => {
     const newPath = e.target.value;
@@ -43,62 +47,95 @@ export default function SettingsPage({
     i18n.changeLanguage(newLang);
   };
 
+  const TabPanel = (props) => {
+    const { children, value, index, ...other } = props;
+    return (
+      <Box
+        role="tabpanel"
+        hidden={value !== index}
+        id={`vertical-tabpanel-${index}`}
+        aria-labelledby={`vertical-tab-${index}`}
+        sx={{ width: '100%' }}
+        {...other}
+      >
+        {value === index && (
+          <Box sx={{ p: 3, width: '100%' }}>
+            <Typography>{children}</Typography>
+          </Box>
+        )}
+      </Box>
+    );
+  }
+
   return (
-    <Container>
-      <TextField
-        id="settings-collections-path"
-        label={t('settings.collections-path')}
-        fullWidth
-        value={collectionsPath}
-        onChange={handlePathChange}
-        sx={{ mt: 2 }}
-      />
+    <Paper
+      sx={{
+        flexGrow: 1,
+        display: 'flex',
+        height: '100%',
+      }}
+    >
+      <Tabs
+        orientation="vertical"
+        variant="scrollable"
+        value={tabValue}
+        onChange={(_, newValue) => setTabValue(newValue)}
+        sx={{ borderRight: 1, borderColor: 'divider' }}
+      >
+        <Tab label={t('settings.general')} />
+        <Tab label={t('settings.project-options')} />
+        <Tab label={t('settings.visual-options')} />
+        <Tab label={t('settings.language-select')} />
+      </Tabs>
 
-      <FormControlLabel
-        control={
-          <Switch
-            checked={allowArbitraryRepoCloning}
-            onChange={() => setAllowArbitraryRepoCloning(!allowArbitraryRepoCloning)}
-          />
-        }
-        label={t('settings.allow-arbitrary-repo-cloning')}
-      />
+      <TabPanel value={tabValue} index={0}>
+        <TextField
+          id="settings-collections-path"
+          label={t('settings.collections-path')}
+          fullWidth
+          value={collectionsPath}
+          onChange={handlePathChange}
+          sx={{ mt: 2 }}
+        />
 
-      <Paper variant="outlined" sx={{ p: 2, mt: 4 }}>
-        <Typography variant="h5" gutterBottom>
-          {t('settings.project-options')}
-        </Typography>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={allowArbitraryRepoCloning}
+              onChange={() => setAllowArbitraryRepoCloning(!allowArbitraryRepoCloning)}
+            />
+          }
+          label={t('settings.allow-arbitrary-repo-cloning')}
+        />
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={1}>
         <ProjectsList
           projectsList={projectsList}
           getProjectsList={getProjectsList}
           logMessage={logMessage}
         />
-      </Paper>
+      </TabPanel>
 
-      <Paper variant="outlined" sx={{ p: 2, mt: 4 }}>
-        <Typography variant="h5" gutterBottom>
-          {t('settings.visual-options')}
-        </Typography>
+      <TabPanel value={tabValue} index={2}>
         <FormControlLabel
           control={<Switch checked={darkMode} onChange={() => setDarkMode(!darkMode)} />}
           label={t('settings.dark-mode')}
         />
-      </Paper>
+      </TabPanel>
 
-      <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
-        {t('settings.language-select')}
-      </Typography>
-
-      <Select
-        labelId="settings-language-select-label"
-        id="settings-language-select"
-        value={language}
-        label={t('settings.language-select')}
-        onChange={handleLanguageChange}
-      >
-        <MenuItem value="en">English</MenuItem>
-        <MenuItem value="fr">Français</MenuItem>
-      </Select>
-    </Container>
+      <TabPanel value={tabValue} index={3}>
+        <Select
+          labelId="settings-language-select-label"
+          id="settings-language-select"
+          value={language}
+          label={t('settings.language-select')}
+          onChange={handleLanguageChange}
+        >
+          <MenuItem value="en">English</MenuItem>
+          <MenuItem value="fr">Français</MenuItem>
+        </Select>
+      </TabPanel>
+    </Paper>
   );
 }
