@@ -72,7 +72,7 @@
       "running": "Running",
       "completed": "Completed",
       "unknown": "Unknown",
-      "aborted": "Aborted"
+      "failed": "Failed"
     },
     "open-results-folder": "Open Results Folder"
   },

@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as readline from 'readline';
+import { WorkflowStatus } from '../../types/types.js';
 
 const file = process.argv[2] ?? '.nextflow.log';
 
@@ -111,10 +112,10 @@ export async function readNextflowLog(path: string) {
           });
           break;
         case 'aborted':
-          progress['workflow'].push({ time: ts, status: 'aborted', cause: m[1] });
+          progress['workflow'].push({ time: ts, status: WorkflowStatus.Failed, cause: m[1] });
           break;
         case 'wf_done':
-          progress['workflow'].push({ time: ts, status: 'completed' });
+          progress['workflow'].push({ time: ts, status: WorkflowStatus.Completed });
           break;
       }
       break; // one event per line is enough
