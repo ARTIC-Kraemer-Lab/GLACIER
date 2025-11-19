@@ -25,6 +25,8 @@ import LibraryIcon from '@mui/icons-material/Apps';
 import InstancesIcon from '@mui/icons-material/Storage';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ListItemIcon from '@mui/material/ListItemIcon';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 import { useTranslation } from 'react-i18next';
 
 import HubPage from './Hub';
@@ -59,6 +61,70 @@ const computeTargetDir = (repoUrl, basePath) => {
   }
 };
 
+const TitleBar = ({
+  drawerOpen,
+  setDrawerOpen,
+  view,
+  projects,
+}) => {
+  const { t } = useTranslation();
+  const [projectIdx, setProjectIdx] = useState(0);
+
+  const onChangeProject = (newProject) => {
+    setProjectIdx(newProject);
+  }
+
+  return (
+    <AppBar
+      position="fixed"
+      sx={{
+        width: `calc(100% - ${drawerOpen ? 240 : 56}px)`,
+        ml: drawerOpen ? '240px' : '56px',
+        transition: (theme) =>
+          theme.transitions.create(['width', 'margin-left'], {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.leavingScreen
+          })
+      }}
+    >
+      <Toolbar>
+        <IconButton color="inherit" edge="start" onClick={() => setDrawerOpen((prev) => !prev)}>
+          <MenuIcon />
+        </IconButton>
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            px: 1,
+          }}
+        >
+          <Typography variant="h6" noWrap component="div" sx={{ ml: 1 }}>
+            {t(`sidebar.${view}`)}
+          </Typography>
+          { projects.length > 1 && (
+            <Select
+              value={projectIdx}
+              sx={{
+                ml: 'auto',
+                color: 'text.primary',
+                bgcolor: 'background.paper',
+              }}
+              onChange={(e) => onChangeProject(e.target.value)}
+              size="small"
+            >
+              {projects.map((proj, index) => (
+                <MenuItem value={index}>{proj}</MenuItem>
+              ))}
+            </Select>
+          )}
+        </Box>
+      </Toolbar>
+    </AppBar>
+  )
+}
+
 export default function MainPage({ darkMode, setDarkMode }) {
   const { t } = useTranslation();
 
@@ -72,6 +138,7 @@ export default function MainPage({ darkMode, setDarkMode }) {
   const [view, setView] = useState<navbar_page>('hub');
   const [instancesList, setInstancesList] = useState([]);
   const [log, setLog] = useState([]);
+  const [projectsList, setProjectsList] = useState([]);
   const [severity, setSeverity] = useState<severityLevels>('info');
   const [message, setMessage] = useState('');
   const [open, setOpen] = useState(false);
@@ -146,27 +213,12 @@ export default function MainPage({ darkMode, setDarkMode }) {
 
   return (
     <Box sx={{ display: 'flex' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: `calc(100% - ${drawerOpen ? 240 : 56}px)`,
-          ml: drawerOpen ? '240px' : '56px',
-          transition: (theme) =>
-            theme.transitions.create(['width', 'margin-left'], {
-              easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.leavingScreen
-            })
-        }}
-      >
-        <Toolbar>
-          <IconButton color="inherit" edge="start" onClick={() => setDrawerOpen((prev) => !prev)}>
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ ml: 1 }}>
-            {t('glacier')}
-          </Typography>
-        </Toolbar>
-      </AppBar>
+      <TitleBar
+        drawerOpen={drawerOpen}
+        setDrawerOpen={setDrawerOpen}
+        view={view}
+        projects={projectsList}
+      />
 
       <Drawer
         variant="permanent"
