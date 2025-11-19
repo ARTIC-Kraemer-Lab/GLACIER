@@ -123,7 +123,7 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
   };
 
   return (
-    <Paper variant="outlined" sx={{ p: 2, height: '100%', boxSizing: 'border-box' }}>
+    <Box >
       <Typography variant="h6">
         [{instance.name}] {instance.workflow_version.name}
       </Typography>
@@ -150,6 +150,6 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
           {t('parameters.launch-workflow')}
         </Button>
       </Stack>
-    </Paper>
+    </Box>
   );
 }
