@@ -8,6 +8,7 @@ import { IRepo } from './types.js';
 import { generateUniqueName } from './repo.js';
 import { cloneRepo, ICloneRepo } from './repo.js';
 import { runWorkflow } from './runner.js';
+import { WorkflowStatus } from '../types/types.js';
 import { syncRepo, getWorkflowParams, getWorkflowSchema } from './repo.js';
 import { getCollectionsPath, getDefaultCollectionsDir, locateReports } from './paths.js';
 import store from './store.js';
@@ -433,7 +434,10 @@ export class Collection {
     // First, check progress of 'Running' instances
     const updatePromises = [];
     for (const instance of this.workflow_instances) {
-      if (instance.status === 'running') {
+      if (
+        instance.status === WorkflowStatus.Running ||
+        instance.status === WorkflowStatus.Completed
+      ) {
         const updatePromise = this.updateWorkflowInstanceStatus(instance).then((status) => {
           instance.status = status;
           this.recordRunWorkflow(instance, status);
@@ -480,14 +484,25 @@ export class Collection {
     const workflow_progress = progress.workflow;
     // get status of last item
     if (!workflow_progress || workflow_progress.length === 0) {
-      return 'running';
+      return WorkflowStatus.Running;
     } else {
-      const last = workflow_progress[workflow_progress.length - 1];
-      if (last.status) {
-        return last.status;
+      let status: string = WorkflowStatus.Created;
+      // recurse from the end to find last known status
+      for (let i = workflow_progress.length - 1; i >= 0; i--) {
+        if (
+          status === WorkflowStatus.Completed &&
+          workflow_progress[i].status !== WorkflowStatus.Completed
+        ) {
+          // Try to retrieve a more informative status (success / fail)
+          status = workflow_progress[i].status;
+          break;
+        } else {
+          status = workflow_progress[i].status;
+        }
       }
+      return status;
     }
-    return 'unknown';
+    return WorkflowStatus.Unknown;
   }
 
   killPID = (pid: number, mode = 'graceful') => {

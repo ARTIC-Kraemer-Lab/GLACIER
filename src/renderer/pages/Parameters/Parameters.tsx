@@ -123,7 +123,7 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
   };
 
   return (
-    <Box >
+    <Box>
       <Typography variant="h6">
         [{instance.name}] {instance.workflow_version.name}
       </Typography>

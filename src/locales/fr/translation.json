@@ -72,7 +72,7 @@
       "running": "En cours",
       "completed": "Terminé",
       "unknown": "Inconnu",
-      "aborted": "Annulé"
+      "failed": "Échoué"
     },
     "open-results-folder": "Ouvrir le dossier des résultats"
   },

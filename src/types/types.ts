@@ -3,5 +3,6 @@ export enum WorkflowStatus {
   Running = 'running',
   Completed = 'completed',
   Closed = 'closed',
-  Failed = 'failed'
+  Failed = 'failed',
+  Unknown = 'unknown'
 }

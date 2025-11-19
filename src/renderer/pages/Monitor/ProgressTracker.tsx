@@ -9,6 +9,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import AnsiLog from './AnsiLog.js';
 import { API } from '../../services/api.js';
+import { WorkflowStatus } from '../../../types/types.js';
 import { useTranslation } from 'react-i18next';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -56,10 +57,9 @@ export default function ProgressTracker({ instance, nextflowProgress, workflowSt
 
   const FormatWorkflowStatus = ({ workflowStatus: string }) => {
     let color_palette = 'info';
-    console.log('workflowStatus', workflowStatus);
-    if (workflowStatus === 'aborted') {
+    if (workflowStatus === WorkflowStatus.Failed) {
       color_palette = 'error';
-    } else if (workflowStatus === 'completed') {
+    } else if (workflowStatus === WorkflowStatus.Completed) {
       color_palette = 'success';
     }
     return (
