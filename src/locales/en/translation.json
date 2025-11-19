@@ -83,6 +83,13 @@
     "allow-arbitrary-repo-cloning": "Allow arbitrary repository cloning",
     "language-select": "Language",
     "visual-options": "Visual Options",
-    "project-options": "Project Options"
+    "project-options": "Projects",
+    "projects": {
+      "url": "URL",
+      "add": "Add",
+      "add-failure": "Adding project failed",
+      "remove": "Remove",
+      "unnamed": "Unnamed Project"
+    }
   }
 }

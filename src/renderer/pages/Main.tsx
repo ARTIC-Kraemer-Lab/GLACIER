@@ -11,7 +11,6 @@ import {
   ListItemText,
   Stack,
   TextField,
-  Toolbar,
   Typography,
   Snackbar,
   Paper,
@@ -32,7 +31,8 @@ import { useTranslation } from 'react-i18next';
 import HubPage from './Hub';
 import LibraryPage from './Library';
 import InstancesPage from './Instances';
-import SettingsPage from './Settings';
+import SettingsPage from './Settings/Settings';
+import TitleBar from './TitleBar';
 import { API } from '../services/api.js';
 
 const defaultRepoUrl = 'jsbrittain/workflow-runner-testworkflow';
@@ -60,70 +60,6 @@ const computeTargetDir = (repoUrl, basePath) => {
     return '';
   }
 };
-
-const TitleBar = ({
-  drawerOpen,
-  setDrawerOpen,
-  view,
-  projects,
-}) => {
-  const { t } = useTranslation();
-  const [projectIdx, setProjectIdx] = useState(0);
-
-  const onChangeProject = (newProject) => {
-    setProjectIdx(newProject);
-  }
-
-  return (
-    <AppBar
-      position="fixed"
-      sx={{
-        width: `calc(100% - ${drawerOpen ? 240 : 56}px)`,
-        ml: drawerOpen ? '240px' : '56px',
-        transition: (theme) =>
-          theme.transitions.create(['width', 'margin-left'], {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen
-          })
-      }}
-    >
-      <Toolbar>
-        <IconButton color="inherit" edge="start" onClick={() => setDrawerOpen((prev) => !prev)}>
-          <MenuIcon />
-        </IconButton>
-        <Box
-          sx={{
-            flex: 1,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            px: 1,
-          }}
-        >
-          <Typography variant="h6" noWrap component="div" sx={{ ml: 1 }}>
-            {t(`sidebar.${view}`)}
-          </Typography>
-          { projects.length > 1 && (
-            <Select
-              value={projectIdx}
-              sx={{
-                ml: 'auto',
-                color: 'text.primary',
-                bgcolor: 'background.paper',
-              }}
-              onChange={(e) => onChangeProject(e.target.value)}
-              size="small"
-            >
-              {projects.map((proj, index) => (
-                <MenuItem value={index}>{proj}</MenuItem>
-              ))}
-            </Select>
-          )}
-        </Box>
-      </Toolbar>
-    </AppBar>
-  )
-}
 
 export default function MainPage({ darkMode, setDarkMode }) {
   const { t } = useTranslation();
@@ -156,11 +92,24 @@ export default function MainPage({ darkMode, setDarkMode }) {
     });
   };
 
+  const getProjectsList = async () => {
+    const all_project = {
+      id: 'all',
+      name: 'All',
+      url: undefined,
+      workflows: []
+    };
+    API.getProjectsList().then((projects) => {
+      setProjectsList([all_project, ...projects]);
+    });
+  };
+
   useEffect(() => {
     (async () => {
       const path = await API.getCollectionsPath();
       setCollectionsPath(path);
       refreshInstancesList();
+      getProjectsList();
     })();
   }, []);
 
@@ -218,7 +167,7 @@ export default function MainPage({ darkMode, setDarkMode }) {
         drawerOpen={drawerOpen}
         setDrawerOpen={setDrawerOpen}
         view={view}
-        projects={projectsList}
+        projectsList={projectsList}
       />
 
       <Drawer
@@ -319,7 +268,10 @@ export default function MainPage({ darkMode, setDarkMode }) {
                 setCollectionsPath={setCollectionsPath}
                 allowArbitraryRepoCloning={allowArbitraryRepoCloning}
                 setAllowArbitraryRepoCloning={setAllowArbitraryRepoCloning}
+                projectsList={projectsList}
+                getProjectsList={getProjectsList}
                 refreshInstancesList={refreshInstancesList}
+                logMessage={logMessage}
               />
             ) : null}
           </Paper>

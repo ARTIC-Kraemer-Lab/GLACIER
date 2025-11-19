@@ -9,7 +9,8 @@ import {
   MenuItem,
   Paper
 } from '@mui/material';
-import { API } from '../services/api.js';
+import ProjectsList from './ProjectsList.js';
+import { API } from '../../services/api.js';
 import { useTranslation } from 'react-i18next';
 
 export default function SettingsPage({
@@ -19,7 +20,10 @@ export default function SettingsPage({
   setCollectionsPath,
   allowArbitraryRepoCloning,
   setAllowArbitraryRepoCloning,
-  refreshInstancesList
+  projectsList,
+  getProjectsList,
+  refreshInstancesList,
+  logMessage
 }) {
   const { t, i18n } = useTranslation();
 
@@ -41,10 +45,6 @@ export default function SettingsPage({
 
   return (
     <Container>
-      <Typography variant="h6" gutterBottom>
-        {t('settings.title')}
-      </Typography>
-
       <TextField
         id="settings-collections-path"
         label={t('settings.collections-path')}
@@ -54,23 +54,29 @@ export default function SettingsPage({
         sx={{ mt: 2 }}
       />
 
+      <FormControlLabel
+        control={
+          <Switch
+            checked={allowArbitraryRepoCloning}
+            onChange={() => setAllowArbitraryRepoCloning(!allowArbitraryRepoCloning)}
+          />
+        }
+        label={t('settings.allow-arbitrary-repo-cloning')}
+      />
+
       <Paper variant="outlined" sx={{ p: 2, mt: 4 }}>
-        <Typography variant="h6" gutterBottom>
+        <Typography variant="h5" gutterBottom>
           {t('settings.project-options')}
         </Typography>
-        <FormControlLabel
-          control={
-            <Switch
-              checked={allowArbitraryRepoCloning}
-              onChange={() => setAllowArbitraryRepoCloning(!allowArbitraryRepoCloning)}
-            />
-          }
-          label={t('settings.allow-arbitrary-repo-cloning')}
+        <ProjectsList
+          projectsList={projectsList}
+          getProjectsList={getProjectsList}
+          logMessage={logMessage}
         />
       </Paper>
 
       <Paper variant="outlined" sx={{ p: 2, mt: 4 }}>
-        <Typography variant="h6" gutterBottom>
+        <Typography variant="h5" gutterBottom>
           {t('settings.visual-options')}
         </Typography>
         <FormControlLabel
@@ -79,7 +85,7 @@ export default function SettingsPage({
         />
       </Paper>
 
-      <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+      <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
         {t('settings.language-select')}
       </Typography>
 
@@ -93,7 +99,6 @@ export default function SettingsPage({
         <MenuItem value="en">English</MenuItem>
         <MenuItem value="fr">Français</MenuItem>
       </Select>
-
     </Container>
   );
 }

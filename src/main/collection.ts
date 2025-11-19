@@ -155,17 +155,20 @@ class WorkflowInstance implements IWorkflowInstance {
 export interface IProject {
   id: string;
   name: string;
+  url: string;
   workflows: IWorkflow[];
 }
 
 class Project implements IProject {
   id: string;
   name: string;
+  url: string;
   workflows: IWorkflow[];
 
-  constructor({ id, name, workflows = [] }: IProject) {
+  constructor({ id, name, url, workflows = [] }: IProject) {
     this.id = id;
     this.name = name;
+    this.url = url;
     this.workflows = workflows;
   }
 }
@@ -816,5 +819,35 @@ export class Collection {
 
   getInstanceReportsList(instance: IWorkflowInstance): Record<string, string>[] {
     return locateReports(instance.path);
+  }
+
+  getProjectsList(): IProject[] {
+    if (this.projects.length > 0) {
+      return this.projects;
+    }
+    return this.projects;
+  }
+
+  addProject(repoPath: string): string {
+    // return text string on error
+    return 'Adding projects is not currently supported.';
+
+    // /// Replace with repo parsing logic ///
+    const i = this.projects.length + 1;
+    this.projects.push(
+      new Project({
+        id: i.toString(),
+        name: `New Project ${i}`,
+        url: repoPath,
+        workflows: []
+      })
+    );
+    return '';
+  }
+
+  removeProject(project: IProject) {
+    const index = this.projects.findIndex((p) => p.id === project.id);
+    if (index === -1) return 'Project not found in collection.';
+    this.projects.splice(index, 1);
   }
 }

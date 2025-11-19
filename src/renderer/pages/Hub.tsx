@@ -79,8 +79,7 @@ export default function HubPage({
       {' '}
       {/* extra space for fixed log */}
       <Stack spacing={3}>
-        
-        { allowArbitraryRepoCloning && (
+        {allowArbitraryRepoCloning && (
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
               {t('hub.clone-a-github-repository')}
