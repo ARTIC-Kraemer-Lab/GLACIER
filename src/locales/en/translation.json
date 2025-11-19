@@ -80,6 +80,9 @@
     "title": "Settings",
     "dark-mode": "Dark Mode",
     "collections-path": "Library path",
-    "language-select": "Language"
+    "allow-arbitrary-repo-cloning": "Allow arbitrary repository cloning",
+    "language-select": "Language",
+    "visual-options": "Visual Options",
+    "project-options": "Project Options"
   }
 }

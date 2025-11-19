@@ -80,6 +80,9 @@
     "title": "Paramètres",
     "dark-mode": "Mode sombre",
     "collections-path": "Chemin de la bibliothèque",
-    "language-select": "Langue"
+    "allow-arbitrary-repo-cloning": "Autoriser le clonage de dépôts arbitraires",
+    "language-select": "Langue",
+    "visual-options": "Options visuelles",
+    "project-options": "Options de projet"
   }
 }

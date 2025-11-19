@@ -130,6 +130,7 @@ export default function MainPage({ darkMode, setDarkMode }) {
 
   const [repoUrl, setRepoUrl] = useState(defaultRepoUrl);
   const [collectionsPath, setCollectionsPath] = useState('');
+  const [allowArbitraryRepoCloning, setAllowArbitraryRepoCloning] = useState(true);
   const [targetDir, setTargetDir] = useState('');
   const [folderPath, setFolderPath] = useState('');
   const [imageName, setImageName] = useState(defaultImageName);
@@ -288,6 +289,7 @@ export default function MainPage({ darkMode, setDarkMode }) {
                 setTargetDir={setTargetDir}
                 setFolderPath={setFolderPath}
                 drawerOpen={drawerOpen}
+                allowArbitraryRepoCloning={allowArbitraryRepoCloning}
                 logMessage={logMessage}
               />
             ) : view === 'library' ? (
@@ -315,6 +317,8 @@ export default function MainPage({ darkMode, setDarkMode }) {
                 setDarkMode={setDarkMode}
                 collectionsPath={collectionsPath}
                 setCollectionsPath={setCollectionsPath}
+                allowArbitraryRepoCloning={allowArbitraryRepoCloning}
+                setAllowArbitraryRepoCloning={setAllowArbitraryRepoCloning}
                 refreshInstancesList={refreshInstancesList}
               />
             ) : null}

@@ -143,7 +143,7 @@ export default function HeaderMenu({ instance, logMessage }) {
         </MenuItem>
       </Menu>
 
-      <Paper
+      <Box
         sx={{
           display: 'flex',
           flexDirection: 'column',
@@ -156,7 +156,7 @@ export default function HeaderMenu({ instance, logMessage }) {
         <Typography variant="subtitle1" sx={{ textAlign: 'center' }}>
           {instance['workflow_version']['name']}
         </Typography>
-      </Paper>
+      </Box>
 
       <Button
         id="open-results-folder-button"

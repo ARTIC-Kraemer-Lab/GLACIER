@@ -6,7 +6,8 @@ import {
   FormControlLabel,
   TextField,
   Select,
-  MenuItem
+  MenuItem,
+  Paper
 } from '@mui/material';
 import { API } from '../services/api.js';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +17,8 @@ export default function SettingsPage({
   setDarkMode,
   collectionsPath,
   setCollectionsPath,
+  allowArbitraryRepoCloning,
+  setAllowArbitraryRepoCloning,
   refreshInstancesList
 }) {
   const { t, i18n } = useTranslation();
@@ -42,11 +45,6 @@ export default function SettingsPage({
         {t('settings.title')}
       </Typography>
 
-      <FormControlLabel
-        control={<Switch checked={darkMode} onChange={() => setDarkMode(!darkMode)} />}
-        label={t('settings.dark-mode')}
-      />
-
       <TextField
         id="settings-collections-path"
         label={t('settings.collections-path')}
@@ -55,6 +53,31 @@ export default function SettingsPage({
         onChange={handlePathChange}
         sx={{ mt: 2 }}
       />
+
+      <Paper variant="outlined" sx={{ p: 2, mt: 4 }}>
+        <Typography variant="h6" gutterBottom>
+          {t('settings.project-options')}
+        </Typography>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={allowArbitraryRepoCloning}
+              onChange={() => setAllowArbitraryRepoCloning(!allowArbitraryRepoCloning)}
+            />
+          }
+          label={t('settings.allow-arbitrary-repo-cloning')}
+        />
+      </Paper>
+
+      <Paper variant="outlined" sx={{ p: 2, mt: 4 }}>
+        <Typography variant="h6" gutterBottom>
+          {t('settings.visual-options')}
+        </Typography>
+        <FormControlLabel
+          control={<Switch checked={darkMode} onChange={() => setDarkMode(!darkMode)} />}
+          label={t('settings.dark-mode')}
+        />
+      </Paper>
 
       <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
         {t('settings.language-select')}
@@ -70,6 +93,7 @@ export default function SettingsPage({
         <MenuItem value="en">English</MenuItem>
         <MenuItem value="fr">Français</MenuItem>
       </Select>
+
     </Container>
   );
 }

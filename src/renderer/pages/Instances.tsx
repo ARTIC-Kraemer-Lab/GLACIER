@@ -90,8 +90,8 @@ const InstanceList = ({ rows, setItem, instancesList, refreshInstancesList }) =>
   };
 
   return (
-    <Box sx={{ mt: 2 }}>
-      <Typography variant="h5" gutterBottom>
+    <Box>
+      <Typography variant="h6" gutterBottom>
         {t('instances.title')}
       </Typography>
 
