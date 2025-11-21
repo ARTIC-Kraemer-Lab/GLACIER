@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as fs_sync from 'fs';
+import slash from 'slash';
 import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import { IWorkflowInstance } from '../../main/collection.js'; // should not be linking directly to main from here
@@ -12,6 +13,38 @@ export interface IRunWorkflowOpts {
   profile?: string;
 }
 
+const is_windows = process.platform === 'win32';
+
+const toPosixPath = (base: string) => {
+  return slash(base).replace('C:', '/mnt/c');
+}
+
+const resolvePath = (base: string, name: string) => {
+  const rtn = toPosixPath(path.resolve(base, name))
+  return rtn;
+}
+
+const looksLikePath = (s: string): boolean => {
+  return /^[a-zA-Z]:\\/.test(s) || /[\\/]/.test(s);
+}
+
+const paramsToPosix = (params: any): any => {
+  if (Array.isArray(params)) {
+    return params.map(paramsToPosix);
+  } else if (params && typeof params === 'object') {
+    for (const [key, value] of Object.entries(params)) {
+      params[key] = paramsToPosix(value);
+    }
+    return params;
+  } else if (typeof params === 'string') {
+    if (looksLikePath(params)) {
+      return toPosixPath(params);
+    }
+    return params;
+  }
+  return params;
+}
+
 export async function runWorkflow(
   instance: IWorkflowInstance,
   params: paramsT,
@@ -19,10 +52,15 @@ export async function runWorkflow(
 ) {
   // Launch nextflow natively on host system
   const name = instance.name;
-  const instancePath = instance.path;
-  const workPath = path.resolve(instancePath, 'work');
+  const instancePath = instance.path;  // launch from Windows path (on win32)
+  const workPath = resolvePath(instancePath, 'work');
   await fs.mkdir(workPath, { recursive: true });
   const projectPath = instance.workflow_version?.path || instancePath;
+
+  if (is_windows) {
+    // Convert all file and folder paths in params to posix and redirect
+    params = paramsToPosix(params);
+  }
 
   // Save parameters to a file in the instance folder
   const paramsFile = path.resolve(instancePath, 'params.json');
@@ -45,15 +83,58 @@ export async function runWorkflow(
   fs_sync.truncateSync(path.resolve(instancePath, 'stderr.log'), 0);
   const stderr = fs_sync.openSync(path.resolve(instancePath, 'stderr.log'), 'a');
 
+  if (is_windows) {
+    const args = [
+      'nextflow',
+      'run',
+      resolvePath(projectPath, 'main.nf'),
+      '-work-dir',
+      toPosixPath(workPath),
+      '-profile',
+      profile,
+      '-params-file',
+      toPosixPath(paramsFile)
+    ];
+    if (resume) {
+      args.push('-resume');
+    }
+    const cmd = args.join(' ');
+
+    const bashArgs = [
+      cmd,
+      '>', resolvePath(instancePath, 'stdout.log'),
+      '2>', resolvePath(instancePath, 'stderr.log'),
+      '<',
+      '/dev/null',
+    ];
+    const bashCmd = bashArgs.join(' ');
+
+    console.log(`Spawning nextflow with command: ${cmd} from ${instancePath}`);
+    const p = spawn(
+      'wsl.exe',
+      ['-e', 'bash', '-lc', bashCmd],
+      {
+        cwd: instancePath,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        windowsHide: true,
+        detached: true,
+      }
+    );
+    p.unref();
+
+    return p.pid;
+  }
+
+  // Unix / macOS launcher
   const cmd = [
     'run',
-    path.resolve(projectPath, 'main.nf'),
+    resolvePath(projectPath, 'main.nf'),
     '-work-dir',
-    workPath,
+    toPosixPath(workPath),
     '-profile',
     profile,
     '-params-file',
-    paramsFile
+    toPosixPath(paramsFile)
   ];
   if (resume) {
     cmd.push('-resume');
@@ -65,7 +146,6 @@ export async function runWorkflow(
     stdio: ['ignore', stdout, stderr], // stdin ignored
     detached: true
   });
-
   p.unref(); // allow the parent to exit independently
 
   return p.pid;
