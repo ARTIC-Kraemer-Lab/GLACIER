@@ -82,10 +82,10 @@ export default function SettingsPage({
         onChange={(_, newValue) => setTabValue(newValue)}
         sx={{ borderRight: 1, borderColor: 'divider' }}
       >
-        <Tab label={t('settings.general')} />
-        <Tab label={t('settings.project-options')} />
-        <Tab label={t('settings.visual-options')} />
-        <Tab label={t('settings.language-select')} />
+        <Tab id="settings-general-panel" label={t('settings.general')} />
+        <Tab id="settings-project-panel" label={t('settings.project-options')} />
+        <Tab id="settings-visual-panel" label={t('settings.visual-options')} />
+        <Tab id="settings-language-panel" label={t('settings.language-select')} />
       </Tabs>
 
       <TabPanel value={tabValue} index={0}>
