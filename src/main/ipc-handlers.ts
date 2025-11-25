@@ -95,4 +95,16 @@ export function registerIpcHandlers() {
   ipcMain.handle('get-workflow-schema', async (event, repoPath) => {
     return collection.getWorkflowSchema(repoPath);
   });
+
+  ipcMain.handle('get-projects-list', async (event) => {
+    return collection.getProjectsList();
+  });
+
+  ipcMain.handle('add-project', async (event, repoPath) => {
+    return collection.addProject(repoPath);
+  });
+
+  ipcMain.handle('remove-project', async (event, project) => {
+    return collection.removeProject(project);
+  });
 }

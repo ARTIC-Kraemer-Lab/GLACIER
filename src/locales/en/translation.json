@@ -78,8 +78,20 @@
   },
   "settings": {
     "title": "Settings",
+    "general": "General",
     "dark-mode": "Dark Mode",
     "collections-path": "Library path",
-    "language-select": "Language"
+    "allow-arbitrary-repo-cloning": "Allow arbitrary repository cloning",
+    "language-select": "Language",
+    "visual-options": "Visual",
+    "project-options": "Projects",
+    "projects": {
+      "url": "URL",
+      "add": "Add",
+      "add-failure": "Adding project failed",
+      "remove": "Remove",
+      "unnamed": "Unnamed Project",
+      "no-projects": "No projects"
+    }
   }
 }

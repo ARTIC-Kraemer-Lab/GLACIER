@@ -42,7 +42,6 @@ export default function LibraryPage({
       {' '}
       {/* extra space for fixed log */}
       <Stack spacing={3}>
-        <Typography variant="h6">{t('library.local-repositories')}</Typography>
         <Grid container spacing={2}>
           {repos.map((repo) => (
             /* @ts-ignore */

@@ -32,6 +32,7 @@ test('clone a repository', async ({ page }) => {
   await page.click('#sidebar-settings-button');
 
   // Set library path to a temporary folder
+  await page.click('#settings-general-panel');
   const glacier_path = path.resolve(path.join(os.tmpdir(), 'GLACIER-' + Date.now().toString()));
   fs.rmSync(glacier_path, { recursive: true, force: true });
   expect(fs.existsSync(glacier_path)).toBe(false);
@@ -40,6 +41,7 @@ test('clone a repository', async ({ page }) => {
   await page.fill('#settings-collections-path', `${library_path}`);
 
   // Use English language for this test
+  await page.click('#settings-language-panel');
   await page.click('#settings-language-select');
   await page.getByRole('option', { name: 'English' }).click();
 
@@ -97,6 +99,7 @@ test('launch local workflow', async ({ page }) => {
   await page.click('#sidebar-settings-button');
 
   // Get the library path
+  await page.click('#settings-general-panel');
   const library_path = await page.inputValue('#settings-collections-path');
   const dest_path = path.join(library_path, 'workflows', 'local', 'sleep@undefined');
 

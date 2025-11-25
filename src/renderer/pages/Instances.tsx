@@ -90,11 +90,7 @@ const InstanceList = ({ rows, setItem, instancesList, refreshInstancesList }) =>
   };
 
   return (
-    <Box sx={{ mt: 2 }}>
-      <Typography variant="h5" gutterBottom>
-        {t('instances.title')}
-      </Typography>
-
+    <Box>
       <TableContainer component={Paper}>
         <Table sx={{ minWidth: 650 }} aria-label="simple table" size="small">
           <TableHead>

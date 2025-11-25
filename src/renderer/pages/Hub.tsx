@@ -21,6 +21,7 @@ export default function HubPage({
   drawerOpen,
   setTargetDir,
   setFolderPath,
+  allowArbitraryRepoCloning,
   logMessage
 }) {
   const { t } = useTranslation();
@@ -78,34 +79,36 @@ export default function HubPage({
       {' '}
       {/* extra space for fixed log */}
       <Stack spacing={3}>
-        <Paper variant="outlined" sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            {t('hub.clone-a-github-repository')}
-          </Typography>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Typography>{t('hub.repo')}:</Typography>
-            <TextField
-              id="collections-repo-url"
-              value={repoUrl}
-              onChange={(e) => setRepoUrl(e.target.value)}
-              size="small"
-              fullWidth
-            />
-            <Button
-              id="collections-clone-button"
-              variant="contained"
-              onClick={() => cloneRepo(repoUrl)}
-              size="small"
-            >
-              {t('hub.clone')}
-            </Button>
-          </Stack>
-          {targetDir && (
-            <Typography variant="body2" sx={{ mt: 1, color: 'gray' }}>
-              {targetDir}
+        {allowArbitraryRepoCloning && (
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              {t('hub.clone-a-github-repository')}
             </Typography>
-          )}
-        </Paper>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Typography>{t('hub.repo')}:</Typography>
+              <TextField
+                id="collections-repo-url"
+                value={repoUrl}
+                onChange={(e) => setRepoUrl(e.target.value)}
+                size="small"
+                fullWidth
+              />
+              <Button
+                id="collections-clone-button"
+                variant="contained"
+                onClick={() => cloneRepo(repoUrl)}
+                size="small"
+              >
+                {t('hub.clone')}
+              </Button>
+            </Stack>
+            {targetDir && (
+              <Typography variant="body2" sx={{ mt: 1, color: 'gray' }}>
+                {targetDir}
+              </Typography>
+            )}
+          </Paper>
+        )}
 
         <Grid container spacing={2}>
           {repos.map((repo) => (

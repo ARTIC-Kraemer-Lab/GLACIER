@@ -11,7 +11,6 @@ import {
   ListItemText,
   Stack,
   TextField,
-  Toolbar,
   Typography,
   Snackbar,
   Paper,
@@ -25,12 +24,15 @@ import LibraryIcon from '@mui/icons-material/Apps';
 import InstancesIcon from '@mui/icons-material/Storage';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ListItemIcon from '@mui/material/ListItemIcon';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 import { useTranslation } from 'react-i18next';
 
 import HubPage from './Hub';
 import LibraryPage from './Library';
 import InstancesPage from './Instances';
-import SettingsPage from './Settings';
+import SettingsPage from './Settings/Settings';
+import TitleBar from './TitleBar';
 import { API } from '../services/api.js';
 
 const defaultRepoUrl = 'jsbrittain/workflow-runner-testworkflow';
@@ -64,6 +66,7 @@ export default function MainPage({ darkMode, setDarkMode }) {
 
   const [repoUrl, setRepoUrl] = useState(defaultRepoUrl);
   const [collectionsPath, setCollectionsPath] = useState('');
+  const [allowArbitraryRepoCloning, setAllowArbitraryRepoCloning] = useState(true);
   const [targetDir, setTargetDir] = useState('');
   const [folderPath, setFolderPath] = useState('');
   const [imageName, setImageName] = useState(defaultImageName);
@@ -72,6 +75,7 @@ export default function MainPage({ darkMode, setDarkMode }) {
   const [view, setView] = useState<navbar_page>('hub');
   const [instancesList, setInstancesList] = useState([]);
   const [log, setLog] = useState([]);
+  const [projectsList, setProjectsList] = useState([]);
   const [severity, setSeverity] = useState<severityLevels>('info');
   const [message, setMessage] = useState('');
   const [open, setOpen] = useState(false);
@@ -88,11 +92,24 @@ export default function MainPage({ darkMode, setDarkMode }) {
     });
   };
 
+  const getProjectsList = async () => {
+    const all_project = {
+      id: 'all',
+      name: 'All',
+      url: undefined,
+      workflows: []
+    };
+    API.getProjectsList().then((projects) => {
+      setProjectsList([all_project, ...projects]);
+    });
+  };
+
   useEffect(() => {
     (async () => {
       const path = await API.getCollectionsPath();
       setCollectionsPath(path);
       refreshInstancesList();
+      getProjectsList();
     })();
   }, []);
 
@@ -146,27 +163,12 @@ export default function MainPage({ darkMode, setDarkMode }) {
 
   return (
     <Box sx={{ display: 'flex' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: `calc(100% - ${drawerOpen ? 240 : 56}px)`,
-          ml: drawerOpen ? '240px' : '56px',
-          transition: (theme) =>
-            theme.transitions.create(['width', 'margin-left'], {
-              easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.leavingScreen
-            })
-        }}
-      >
-        <Toolbar>
-          <IconButton color="inherit" edge="start" onClick={() => setDrawerOpen((prev) => !prev)}>
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ ml: 1 }}>
-            {t('glacier')}
-          </Typography>
-        </Toolbar>
-      </AppBar>
+      <TitleBar
+        drawerOpen={drawerOpen}
+        setDrawerOpen={setDrawerOpen}
+        view={view}
+        projectsList={projectsList}
+      />
 
       <Drawer
         variant="permanent"
@@ -236,6 +238,7 @@ export default function MainPage({ darkMode, setDarkMode }) {
                 setTargetDir={setTargetDir}
                 setFolderPath={setFolderPath}
                 drawerOpen={drawerOpen}
+                allowArbitraryRepoCloning={allowArbitraryRepoCloning}
                 logMessage={logMessage}
               />
             ) : view === 'library' ? (
@@ -263,7 +266,12 @@ export default function MainPage({ darkMode, setDarkMode }) {
                 setDarkMode={setDarkMode}
                 collectionsPath={collectionsPath}
                 setCollectionsPath={setCollectionsPath}
+                allowArbitraryRepoCloning={allowArbitraryRepoCloning}
+                setAllowArbitraryRepoCloning={setAllowArbitraryRepoCloning}
+                projectsList={projectsList}
+                getProjectsList={getProjectsList}
                 refreshInstancesList={refreshInstancesList}
+                logMessage={logMessage}
               />
             ) : null}
           </Paper>

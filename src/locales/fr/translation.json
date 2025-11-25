@@ -78,8 +78,20 @@
   },
   "settings": {
     "title": "Paramètres",
+    "general": "Général",
     "dark-mode": "Mode sombre",
     "collections-path": "Chemin de la bibliothèque",
-    "language-select": "Langue"
+    "allow-arbitrary-repo-cloning": "Autoriser le clonage de dépôts arbitraires",
+    "language-select": "Langue",
+    "visual-options": "Visuelles",
+    "project-options": "Projets",
+    "projects": {
+      "url": "URL",
+      "add": "Ajouter",
+      "add-failure": "L'ajout du projet a échoué",
+      "remove": "Supprimer",
+      "unnamed": "Projet sans nom",
+      "no-projects": "Aucun projet ajouté"
+    }
   }
 }
