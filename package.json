@@ -82,7 +82,8 @@
     "react-dom": "^19.1.0",
     "react-i18next": "^15.7.3",
     "react-resizable-panels": "^3.0.6",
-    "typescript": "^5.8.3",
+    "slash": "^5.1.0",
+    "typescript": "^5.9.3",
     "unique-names-generator": "^4.7.1"
   }
 }
