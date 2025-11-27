@@ -151,10 +151,10 @@ export default function HeaderMenu({ instance, logMessage }) {
         }}
       >
         <Typography variant="h6" sx={{ textAlign: 'center' }}>
-          {instance['name']}
+          {instance.name}
         </Typography>
         <Typography variant="subtitle1" sx={{ textAlign: 'center' }}>
-          {instance['workflow_version']['name']}
+          {instance.workflow_version.name}
         </Typography>
       </Box>
 

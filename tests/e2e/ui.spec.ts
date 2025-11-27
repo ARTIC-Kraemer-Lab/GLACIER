@@ -54,12 +54,17 @@ test('clone a repository', async ({ page }) => {
   // --- Navigate to Hub page
   await page.click('#sidebar-hub-button');
 
-  // Clone repository
+  // Add repository
   const repo_owner = 'jsbrittain';
   const repo_name = 'workflow-runner-test-nextflow';
   await page.fill('#collections-repo-url', `${repo_owner}/${repo_name}`);
-  await page.click('#collections-clone-button');
-  await waitForLogLine(page, new RegExp(`^Cloned main to `));
+  await page.click('#collections-add-button');
+  await page.waitForSelector('#hub-install-workflow-runner-test-nextflow', {
+    timeout: TIMEOUT_10s
+  });
+
+  // Clone the new repository
+  await page.click('#hub-install-workflow-runner-test-nextflow');
 
   // --- Navigate to Library page
   await page.click('#sidebar-library-button');

@@ -17,16 +17,16 @@ const is_windows = process.platform === 'win32';
 
 const toPosixPath = (base: string) => {
   return slash(base).replace('C:', '/mnt/c');
-}
+};
 
 const resolvePath = (base: string, name: string) => {
-  const rtn = toPosixPath(path.resolve(base, name))
+  const rtn = toPosixPath(path.resolve(base, name));
   return rtn;
-}
+};
 
 const looksLikePath = (s: string): boolean => {
   return /^[a-zA-Z]:\\/.test(s) || /[\\/]/.test(s);
-}
+};
 
 const paramsToPosix = (params: any): any => {
   if (Array.isArray(params)) {
@@ -43,7 +43,7 @@ const paramsToPosix = (params: any): any => {
     return params;
   }
   return params;
-}
+};
 
 export async function runWorkflow(
   instance: IWorkflowInstance,
@@ -52,7 +52,7 @@ export async function runWorkflow(
 ) {
   // Launch nextflow natively on host system
   const name = instance.name;
-  const instancePath = instance.path;  // launch from Windows path (on win32)
+  const instancePath = instance.path; // launch from Windows path (on win32)
   const workPath = resolvePath(instancePath, 'work');
   await fs.mkdir(workPath, { recursive: true });
   const projectPath = instance.workflow_version?.path || instancePath;
@@ -102,24 +102,22 @@ export async function runWorkflow(
 
     const bashArgs = [
       cmd,
-      '>', resolvePath(instancePath, 'stdout.log'),
-      '2>', resolvePath(instancePath, 'stderr.log'),
+      '>',
+      resolvePath(instancePath, 'stdout.log'),
+      '2>',
+      resolvePath(instancePath, 'stderr.log'),
       '<',
-      '/dev/null',
+      '/dev/null'
     ];
     const bashCmd = bashArgs.join(' ');
 
     console.log(`Spawning nextflow with command: ${cmd} from ${instancePath}`);
-    const p = spawn(
-      'wsl.exe',
-      ['-e', 'bash', '-lc', bashCmd],
-      {
-        cwd: instancePath,
-        stdio: ['ignore', 'pipe', 'pipe'],
-        windowsHide: true,
-        detached: true,
-      }
-    );
+    const p = spawn('wsl.exe', ['-e', 'bash', '-lc', bashCmd], {
+      cwd: instancePath,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+      detached: true
+    });
     p.unref();
 
     return p.pid;

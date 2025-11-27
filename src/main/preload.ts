@@ -1,8 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron'); // must be CommonJS for electron
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  createWorkflowInstance: (workflow_id: string) =>
-    ipcRenderer.invoke('create-workflow-instance', workflow_id),
+  createWorkflowInstance: (workflow_id: string, version: string) =>
+    ipcRenderer.invoke('create-workflow-instance', workflow_id, version),
   runWorkflow: (instance: any, params: any, opts: any) =>
     ipcRenderer.invoke('run-workflow', instance, params, opts),
   listWorkflowInstances: () => ipcRenderer.invoke('list-workflow-instances'),
@@ -27,7 +27,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('get-work-log', instance, workID, logType),
   getAvailableProfiles: (instance: any) => ipcRenderer.invoke('get-available-profiles', instance),
 
-  cloneRepo: (repoUrl: string) => ipcRenderer.invoke('clone-repo', repoUrl),
+  cloneRepo: (repoUrl: string, ver: string) => ipcRenderer.invoke('clone-repo', repoUrl, ver),
   getCollectionsPath: () => ipcRenderer.invoke('get-collections-path'),
   setCollectionsPath: (path: string) => ipcRenderer.invoke('set-collections-path', path),
   getCollections: () => ipcRenderer.invoke('get-collections'),
@@ -38,5 +38,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getWorkflowSchema: (repoPath: string) => ipcRenderer.invoke('get-workflow-schema', repoPath),
   getProjectsList: () => ipcRenderer.invoke('get-projects-list'),
   addProject: (repoPath: string) => ipcRenderer.invoke('add-project', repoPath),
-  removeProject: (project: any) => ipcRenderer.invoke('remove-project', project)
+  removeProject: (project: any) => ipcRenderer.invoke('remove-project', project),
+  getInstallableReposList: () => ipcRenderer.invoke('get-installable-repos-list'),
+  addInstallableRepo: (repoUrl: string) => ipcRenderer.invoke('add-installable-repo', repoUrl)
 });

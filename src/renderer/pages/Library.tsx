@@ -8,7 +8,9 @@ import {
   Typography,
   Box,
   Grid,
+  Select,
   Snackbar,
+  MenuItem,
   Alert
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
@@ -37,6 +39,20 @@ export default function LibraryPage({
     })();
   }, []);
 
+  const onClickSync = async (repo) => {
+    try {
+      const result = await API.syncRepo(repo.path);
+      if (result?.status === 'ok') {
+        logMessage(t('library.repo-sync-success'), 'success');
+      } else {
+        throw new Error(result?.message || t('library.repo-sync-failed'));
+      }
+    } catch (err) {
+      console.error(err);
+      logMessage(t('library.repo-sync-failed'), 'error');
+    }
+  };
+
   return (
     <Container sx={{ pb: 12 }}>
       {' '}
@@ -48,7 +64,7 @@ export default function LibraryPage({
             <Grid item xs={12} sm={6} md={4} key={repo.path}>
               <Paper variant="outlined" sx={{ p: 2 }}>
                 <Typography variant="subtitle1" gutterBottom>
-                  {repo.name}
+                  {repo.name} ({repo.version})
                 </Typography>
                 <Stack direction="row" spacing={1}>
                   <Button
@@ -63,19 +79,7 @@ export default function LibraryPage({
                     id={`collections-sync-${repo.name}`}
                     size="small"
                     variant="outlined"
-                    onClick={async () => {
-                      try {
-                        const result = await API.syncRepo(repo.path);
-                        if (result?.status === 'ok') {
-                          logMessage(t('library.repo-sync-success'), 'success');
-                        } else {
-                          throw new Error(result?.message || t('library.repo-sync-failed'));
-                        }
-                      } catch (err) {
-                        console.error(err);
-                        logMessage(t('library.repo-sync-failed'), 'error');
-                      }
-                    }}
+                    onClick={() => onClickSync(repo)}
                   >
                     {t('library.sync')}
                   </Button>

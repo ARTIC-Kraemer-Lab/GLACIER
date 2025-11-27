@@ -23,22 +23,10 @@ export interface ICloneRepo {
   path: string;
 }
 
-export async function cloneRepo(
-  repoUrl: string,
-  workflowDir: string,
-  branch: string | null = null,
-  tag: string | null = null
-): Promise<ICloneRepo> {
+function parseRepoUrl(repoUrl: string): { owner: string; repo: string; url: string } {
+  // Interpret repository reference as short-form or full URL
   let owner: string = '';
   let repo: string = '';
-  let version: string | null = null;
-
-  // Either branch or tag can be specified (but not both), otherwise default branch
-  if (branch !== null && tag !== null) {
-    throw new Error('Either branch or tag must be specified, not both.');
-  }
-
-  // Interpret repository reference as short-form or full URL
   try {
     // Try to parse as full URL
     const url = new URL(repoUrl);
@@ -55,15 +43,18 @@ export async function cloneRepo(
     [owner, repo] = repoUrl.replace(/\\.git$/, '').split('/');
   }
   const url = `https://github.com/${owner}/${repo}.git`;
+  return { owner, repo, url };
+}
+
+export async function cloneRepo(
+  repoUrl: string,
+  workflowDir: string,
+  ver: string | null = null
+): Promise<ICloneRepo> {
+  const { owner, repo, url } = parseRepoUrl(repoUrl);
 
   // Determine the version to clone
-  if (branch !== null) {
-    version = branch;
-  } else if (tag !== null) {
-    version = tag;
-  } else {
-    version = await getDefaultBranch(url);
-  }
+  let version = ver || (await getDefaultBranch(url));
   if (version === null || version === '') {
     version = 'main'; // Fallback
   }
@@ -129,6 +120,28 @@ export async function deleteRepo(repoPath: string) {
       throw new Error(`Failed to delete repo at ${repoPath}: ${err.message}`);
     }
     throw new Error(`Failed to delete repo at ${repoPath}: ${String(err)}`);
+  }
+}
+
+export async function getRepoTags(url: string) {
+  const { owner, repo, url: full_url } = parseRepoUrl(url);
+  try {
+    const info = await git.getRemoteInfo({ http, url: full_url });
+    return Object.keys(info.refs.tags).reverse();
+  } catch (err) {
+    console.error(`Failed to fetch tags from ${url}:`, err);
+    return [];
+  }
+}
+
+export async function getRepoBranches(url: string) {
+  const { owner, repo, url: full_url } = parseRepoUrl(url);
+  try {
+    const info = await git.getRemoteInfo({ http, url: full_url });
+    return Object.keys(info.refs.heads);
+  } catch (err) {
+    console.error(`Failed to fetch branches from ${url}:`, err);
+    return [];
   }
 }
 

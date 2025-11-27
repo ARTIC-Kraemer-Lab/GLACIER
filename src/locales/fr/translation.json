@@ -8,12 +8,15 @@
     "settings": "Paramètres"
   },
   "hub": {
-    "clone-a-github-repository": "Cloner un dépôt GitHub",
+    "add-workflow-from-repository": "Ajouter un flux de travail depuis un dépôt",
     "repo": "Dépôt",
+    "add": "Ajouter",
     "clone": "Cloner",
     "clone-return-none": "Le clonage a échoué ou n'a rien retourné",
     "clone-failed": "L'opération de clonage a échoué",
-    "install": "Installer"
+    "install": "Installer",
+    "repo-added": "Dépôt ajouté avec succès",
+    "repo-add-failed": "L'ajout du dépôt a échoué"
   },
   "library": {
     "local-repositories": "Dépôts locaux",

@@ -82,7 +82,7 @@ app.post('/api/get-available-profiles', async (req, res) =>
 );
 
 app.post('/api/clone-repo', async (req, res) =>
-  post_response(res, collection.cloneRepo(req.body.repoRef))
+  post_response(res, collection.cloneRepo(req.body.repoUrl, req.body.ver))
 );
 
 app.post('/api/sync-repo', async (req, res) =>
@@ -119,6 +119,26 @@ app.post('/api/get-workflow-params', async (req, res) =>
 
 app.post('/api/get-workflow-schema', async (req, res) =>
   post_response(res, collection.getWorkflowSchema(req.body.repoPath))
+);
+
+app.post('/api/get-projects-list', async (req, res) =>
+  post_response(res, collection.getProjectsList())
+);
+
+app.post('/api/add-project', async (req, res) =>
+  post_response(res, collection.addProject(req.body.repoPath))
+);
+
+app.post('/api/remove-project', async (req, res) =>
+  post_response(res, collection.removeProject(req.body.project))
+);
+
+app.post('/api/get-installable-repos-list', async (req, res) =>
+  post_response(res, collection.getInstallableReposList())
+);
+
+app.post('/api/add-installable-repo', async (req, res) =>
+  post_response(res, collection.addInstallableRepo(req.body.repoUrl))
 );
 
 const PORT = process.env.PORT || 3030;
