@@ -2,7 +2,10 @@
 import React from 'react';
 import { withJsonFormsControlProps } from '@jsonforms/react';
 import { ControlProps, isDescriptionHidden } from '@jsonforms/core';
-import { TextField, Button, Stack } from '@mui/material';
+import { TextField, IconButton, Stack } from '@mui/material';
+import { Box } from '@mui/system';
+import FileOpenIcon from '@mui/icons-material/FileOpen';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 
 const toFilters = (accept?: string): Electron.FileFilter[] | undefined => {
   // accept like ".csv,.fastq,.fastq.gz,application/json"
@@ -56,21 +59,34 @@ function InnerFilePathControl(props: ControlProps) {
   };
 
   return (
-    <Stack spacing={1} sx={{ opacity: enabled ? 1 : 0.6 }}>
-      <TextField
-        id={id}
-        label={label}
-        value={data ?? ''}
-        required={required}
-        InputProps={{ readOnly: true }}
-        disabled={!enabled}
-        error={Boolean(errors)}
-        helperText={errors || (showDesc ? description : undefined)}
-        size="small"
-      />
-      <Button variant="outlined" size="small" onClick={pick} disabled={!enabled}>
-        {isDirectory ? 'Choose folder…' : 'Choose file…'}
-      </Button>
+    <Stack
+      direction="row"
+      spacing={1}
+      sx={{ opacity: enabled ? 1 : 0.6 }}
+      alignItems="flex-start" // top-align the children
+    >
+      {/* Left: field + helper text */}
+      <Box sx={{ flexGrow: 1 }}>
+        <TextField
+          id={id}
+          label={label}
+          value={data ?? ''}
+          required={required}
+          InputProps={{ readOnly: true }}
+          disabled={!enabled}
+          error={Boolean(errors)}
+          helperText={errors || (showDesc ? description : undefined)}
+          size="small"
+          fullWidth
+        />
+      </Box>
+
+      {/* Right: icon, top-aligned with the field */}
+      <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+        <IconButton onClick={pick} disabled={!enabled}>
+          {isDirectory ? <FolderOpenIcon /> : <FileOpenIcon />}
+        </IconButton>
+      </Box>
     </Stack>
   );
 }
