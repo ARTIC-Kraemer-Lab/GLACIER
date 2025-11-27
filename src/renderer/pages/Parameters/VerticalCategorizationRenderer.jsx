@@ -54,6 +54,7 @@ const VerticalCategorization = ({ uischema, schema, path, visible }) => {
             label={getLabel(cat, i)}
             id={`vert-tab-${i}`}
             aria-controls={`vert-tabpanel-${i}`}
+            sx={{ textTransform: 'none' }}
           />
         ))}
       </Tabs>
