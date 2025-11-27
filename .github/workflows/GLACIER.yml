@@ -20,3 +20,5 @@ jobs:
     uses: ./.github/workflows/unit.yml
   e2e-tests:
     uses: ./.github/workflows/e2e.yml
+  e2e-tests-win:
+    uses: ./.github/workflows/e2e_wsl.yml
