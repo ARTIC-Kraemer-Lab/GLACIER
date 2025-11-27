@@ -8,12 +8,15 @@
     "settings": "Settings"
   },
   "hub": {
-    "clone-a-github-repository": "Clone a GitHub repository",
+    "add-workflow-from-repository": "Add Workflow from Repository",
     "repo": "Repo",
+    "add": "Add",
     "clone": "Clone",
     "clone-return-none": "Clone failed or returned nothing",
     "clone-failed": "Clone operation failed",
-    "install": "Install"
+    "install": "Install",
+    "repo-added": "Repository added successfully",
+    "repo-add-failed": "Failed to add repository"
   },
   "library": {
     "local-repositories": "Local Repositories",

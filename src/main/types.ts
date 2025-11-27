@@ -6,3 +6,7 @@ export interface IRepo {
   version: string;
   params?: { [key: string]: string };
 }
+
+export interface IRepoVersions extends IRepo {
+  versions: string[];
+}

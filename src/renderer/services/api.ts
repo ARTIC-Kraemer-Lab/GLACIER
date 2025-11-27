@@ -2,8 +2,8 @@ const isElectron = Boolean(window?.electronAPI);
 
 const electronAPI = isElectron
   ? {
-      createWorkflowInstance: (workflow_id) =>
-        window.electronAPI.createWorkflowInstance(workflow_id),
+      createWorkflowInstance: (workflow_id, version) =>
+        window.electronAPI.createWorkflowInstance(workflow_id, version),
       runWorkflow: (instance, params, opts) =>
         window.electronAPI.runWorkflow(instance, params, opts),
       listWorkflowInstances: () => window.electronAPI.listWorkflowInstances(),
@@ -26,7 +26,7 @@ const electronAPI = isElectron
         window.electronAPI.getWorkLog(instance, workID, logType),
       getAvailableProfiles: (instance) => window.electronAPI.getAvailableProfiles(instance),
 
-      cloneRepo: (repoRef) => window.electronAPI.cloneRepo(repoRef),
+      cloneRepo: (repoUrl, ver) => window.electronAPI.cloneRepo(repoUrl, ver),
       syncRepo: (repo) => window.electronAPI.syncRepo(repo),
       getCollections: () => window.electronAPI.getCollections(),
       getCollectionsPath: () => window.electronAPI.getCollectionsPath(),
@@ -38,7 +38,9 @@ const electronAPI = isElectron
       getWorkflowSchema: (repoPath) => window.electronAPI.getWorkflowSchema(repoPath),
       getProjectsList: () => window.electronAPI.getProjectsList(),
       addProject: (repoPath) => window.electronAPI.addProject(repoPath),
-      removeProject: (project) => window.electronAPI.removeProject(project)
+      removeProject: (project) => window.electronAPI.removeProject(project),
+      getInstallableReposList: () => window.electronAPI.getInstallableReposList(),
+      addInstallableRepo: (repoUrl) => window.electronAPI.addInstallableRepo(repoUrl)
     }
   : null;
 
@@ -54,8 +56,8 @@ const httpDispatch = async (endpoint, method = 'GET', body = null) => {
 };
 
 const httpAPI = {
-  createWorkflowInstance: async (workflow_id) =>
-    httpDispatch('/api/create-workflow-instance', 'POST', { workflow_id }),
+  createWorkflowInstance: async (workflow_id, version) =>
+    httpDispatch('/api/create-workflow-instance', 'POST', { workflow_id, version }),
   runWorkflow: async (instance, params, opts) =>
     httpDispatch('/api/run-workflow', 'POST', { instance, params, opts }),
   listWorkflowInstances: async () => httpDispatch('/api/list-workflow-instances', 'POST', {}),
@@ -85,7 +87,7 @@ const httpAPI = {
     httpDispatch('/api/get-work-log', 'POST', { instance, workID, logType }),
   getAvailableProfiles: async (instance) =>
     httpDispatch('/api/get-available-profiles', 'POST', { instance }),
-  cloneRepo: async (repoRef) => httpDispatch('/api/clone-repo', 'POST', { repoRef }),
+  cloneRepo: async (repoUrl, ver) => httpDispatch('/api/clone-repo', 'POST', { repoUrl, ver }),
   syncRepo: async (repo) => httpDispatch('/api/sync-repo', 'POST', { repo }),
   getCollections: async () => httpDispatch('/api/get-collections', 'POST', {}),
   getCollectionsPath: async () => httpDispatch('/api/get-collections-path', 'POST', {}),
@@ -101,7 +103,10 @@ const httpAPI = {
     httpDispatch('/api/get-workflow-schema', 'POST', { repoPath }),
   getProjectsList: async () => httpDispatch('/api/get-projects-list', 'POST', {}),
   addProject: async (repoPath) => httpDispatch('/api/add-project', 'POST', { repoPath }),
-  removeProject: async (project) => httpDispatch('/api/remove-project', 'POST', { project })
+  removeProject: async (project) => httpDispatch('/api/remove-project', 'POST', { project }),
+  getInstallableReposList: async () => httpDispatch('/api/get-installable-repos-list', 'POST', {}),
+  addInstallableRepo: async (repoUrl) =>
+    httpDispatch('/api/add-installable-repo', 'POST', { repoUrl })
 };
 
 export const API = isElectron ? electronAPI : httpAPI;

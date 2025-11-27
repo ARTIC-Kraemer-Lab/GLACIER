@@ -60,7 +60,7 @@ const VerticalCategorization = ({ uischema, schema, path, visible }) => {
 
       <Box sx={{ flex: 1, p: 2, minWidth: 0 }}>
         {categories.map((cat, i) => (
-          <div
+          <Box
             role="tabpanel"
             hidden={value !== i}
             id={`vert-tabpanel-${i}`}
@@ -82,7 +82,7 @@ const VerticalCategorization = ({ uischema, schema, path, visible }) => {
                 )}
               </>
             )}
-          </div>
+          </Box>
         ))}
       </Box>
     </Box>

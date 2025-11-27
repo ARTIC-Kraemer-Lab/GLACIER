@@ -4,9 +4,9 @@ import pkg from 'electron';
 const { shell } = pkg;
 import path from 'path';
 import fs from 'fs';
-import { IRepo } from './types.js';
+import { IRepo, IRepoVersions } from './types.js';
 import { generateUniqueName } from './repo.js';
-import { cloneRepo, ICloneRepo } from './repo.js';
+import { cloneRepo, ICloneRepo, getRepoTags, getRepoBranches } from './repo.js';
 import { runWorkflow } from './runner.js';
 import { WorkflowStatus } from '../types/types.js';
 import { syncRepo, getWorkflowParams, getWorkflowSchema } from './repo.js';
@@ -19,6 +19,8 @@ import { parseNextflowLog } from '../runners/nextflow/nf-parse.js';
 //
 
 const instance_database_file = 'instances.json';
+
+const default_repos = ['artic-network/artic-mpxv-nf', 'artic-network/amplicon-nf'];
 
 export enum IWorkflowType {
   NEXTFLOW = 'nextflow',
@@ -203,6 +205,8 @@ export class Collection {
   workflows: Workflow[] = [];
   workflow_instances: WorkflowInstance[] = [];
 
+  installable_repos: IRepoVersions[] = [];
+
   // --- Convenience setters/getters ---------------------------------------------------
 
   get workflow_path(): string {
@@ -217,6 +221,7 @@ export class Collection {
 
   async parseCollection() {
     this.parseWorkflows();
+    this.parseInstallableRepos();
     await this.parseInstances();
   }
 
@@ -264,6 +269,12 @@ export class Collection {
         } as WorkflowVersion);
       }
     }
+  }
+
+  private parseInstallableRepos() {
+    default_repos.forEach((repo) => {
+      this.addInstallableRepo(repo);
+    });
   }
 
   private async parseInstances() {
@@ -406,7 +417,7 @@ export class Collection {
     return this.getRootPath();
   }
 
-  createWorkflowInstance(workflow_id: string): IWorkflowInstance {
+  createWorkflowInstance(workflow_id: string, version: string): IWorkflowInstance {
     const workflow = this.workflows.find((wf) => wf.id === workflow_id);
     if (!workflow) {
       throw new Error(`Workflow ${workflow_id} not found.`);
@@ -414,7 +425,13 @@ export class Collection {
     if (!workflow.versions || workflow.versions.length === 0) {
       throw new Error(`Workflow ${workflow_id} has no versions.`);
     }
-    const workflow_version = workflow.versions[0]; // First listed version as default
+    let workflow_version;
+    if (version === undefined) {
+      // Local repository
+      workflow_version = workflow.versions[0];
+    } else {
+      workflow_version = workflow.versions.filter((v: any) => v.version === version)[0];
+    }
     const owner = workflow.owner;
     const repo_and_version = `${workflow.repo}@${workflow_version.version}`;
     const existing_ids = this.workflow_instances.map((inst) => inst.id);
@@ -700,10 +717,9 @@ export class Collection {
     return await getAvailableProfiles_Nextflow(local_instance);
   }
 
-  async cloneRepo(url: string): Promise<IWorkflowVersion> {
-    const branch = null;
-    const tag = null;
-    const repo: ICloneRepo = await cloneRepo(url, this.workflow_path, branch, tag);
+  async cloneRepo(url: string, ver: string): Promise<IWorkflowVersion> {
+    console.log(`Cloning repository ${url} version ${ver}`);
+    const repo: ICloneRepo = await cloneRepo(url, this.workflow_path, ver);
     const wf_id = `${repo.owner}/${repo.repo}`;
     // Create workflow if it doesn't already exist
     let wf = this.workflows.find((wf) => wf.id === wf_id);
@@ -716,6 +732,7 @@ export class Collection {
         url: repo.url,
         versions: []
       } as IWorkflow);
+      this.workflows.push(wf);
     }
     // Check if version already exists
     let version = wf.versions.find((v) => v.version === repo.version);
@@ -724,14 +741,13 @@ export class Collection {
     }
     version = new WorkflowVersion({
       id: `${wf_id}@${repo.version}`,
-      name: repo.version,
+      name: `${wf_id}@${repo.version}`,
       type: this.determineWorkflowType(repo.path),
       version: repo.version,
       path: repo.path,
       parent_id: wf.id
     });
     wf.versions.push(version);
-    this.workflows.push(wf);
     return version;
   }
 
@@ -743,12 +759,19 @@ export class Collection {
   }
 
   getCollections(): IRepo[] {
-    return this.workflows.map((wf) => ({
-      id: wf.id,
-      name: wf.name,
-      path: wf.versions[0].path, // assume first version for now
-      url: wf.url
-    })) as IRepo[];
+    const repos: IRepo[] = [];
+    this.workflows.forEach((wf) => {
+      wf.versions.forEach((ver) => {
+        repos.push({
+          id: wf.id,
+          name: wf.name,
+          path: ver.path,
+          version: ver.version,
+          url: wf.url
+        } as IRepo);
+      });
+    });
+    return repos;
   }
 
   async runWorkflow(instance: IWorkflowInstance, params: IWorkflowParams = {}, opts = {}) {
@@ -864,5 +887,36 @@ export class Collection {
     const index = this.projects.findIndex((p) => p.id === project.id);
     if (index === -1) return 'Project not found in collection.';
     this.projects.splice(index, 1);
+    return '';
+  }
+
+  getInstallableReposList(): IRepoVersions[] {
+    return this.installable_repos;
+  }
+
+  async addInstallableRepo(url: string) {
+    const name = url.split('/')[1];
+    let versions = await getRepoTags(url);
+    if (versions.length === 0) {
+      versions = await getRepoBranches(url);
+    }
+    if (versions.length === 0) {
+      throw new Error(`No tags or branches found for repository: ${url}`);
+    }
+    let version;
+    if (versions.includes('main')) {
+      version = 'main';
+    } else {
+      version = versions[0];
+    }
+    this.installable_repos.push({
+      id: `${url}`,
+      name: name,
+      url: url,
+      path: '',
+      version: version,
+      versions: versions
+    });
+    return '';
   }
 }

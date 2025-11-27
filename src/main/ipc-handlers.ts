@@ -8,9 +8,12 @@ import { Collection } from './collection.js';
 const collection = Collection.getInstance();
 
 export function registerIpcHandlers() {
-  ipcMain.handle('create-workflow-instance', async (event, workflow_id: string) => {
-    return collection.createWorkflowInstance(workflow_id);
-  });
+  ipcMain.handle(
+    'create-workflow-instance',
+    async (event, workflow_id: string, version: string) => {
+      return collection.createWorkflowInstance(workflow_id, version);
+    }
+  );
 
   ipcMain.handle('list-workflow-instances', async () => {
     return collection.listWorkflowInstances();
@@ -64,8 +67,8 @@ export function registerIpcHandlers() {
     return collection.getAvailableProfiles(instance);
   });
 
-  ipcMain.handle('clone-repo', async (event, repoUrl) => {
-    return await collection.cloneRepo(repoUrl);
+  ipcMain.handle('clone-repo', async (event, repoUrl, ver) => {
+    return await collection.cloneRepo(repoUrl, ver);
   });
 
   ipcMain.handle('get-collections-path', () => {
@@ -106,5 +109,13 @@ export function registerIpcHandlers() {
 
   ipcMain.handle('remove-project', async (event, project) => {
     return collection.removeProject(project);
+  });
+
+  ipcMain.handle('get-installable-repos-list', async (event) => {
+    return collection.getInstallableReposList();
+  });
+
+  ipcMain.handle('add-installable-repo', async (event, repoUrl) => {
+    return collection.addInstallableRepo(repoUrl);
   });
 }

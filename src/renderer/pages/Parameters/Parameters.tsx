@@ -124,9 +124,18 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
 
   return (
     <Box>
-      <Typography variant="h6">
-        [{instance.name}] {instance.workflow_version.name}
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center">
+        <Typography variant="h6">
+          [{instance.name}] {instance.workflow_version.name}
+        </Typography>
+        <Button
+          disabled={schemaErrors !== null}
+          variant="contained"
+          onClick={() => onLaunch(instance, params)}
+        >
+          {t('parameters.launch-workflow')}
+        </Button>
+      </Box>
       <Stack spacing={2} sx={{ mt: 1 }}>
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
           {!isEmpty(schema) ? (
@@ -142,13 +151,6 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
             <Typography>No parameters.</Typography>
           )}
         </Paper>
-        <Button
-          disabled={schemaErrors !== null}
-          variant="contained"
-          onClick={() => onLaunch(instance, params)}
-        >
-          {t('parameters.launch-workflow')}
-        </Button>
       </Stack>
     </Box>
   );
