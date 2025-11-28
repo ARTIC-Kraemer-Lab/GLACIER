@@ -81,7 +81,9 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-i18next": "^15.7.3",
+    "react-markdown": "^10.1.0",
     "react-resizable-panels": "^3.0.6",
+    "remark-gfm": "^4.0.1",
     "slash": "^5.1.0",
     "typescript": "^5.9.3",
     "unique-names-generator": "^4.7.1"

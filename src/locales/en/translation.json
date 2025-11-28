@@ -43,7 +43,13 @@
     "delete_confirm": "Are you sure you want to delete this instance? This action cannot be undone."
   },
   "parameters": {
-    "launch-workflow": "Launch Workflow"
+    "launch-workflow": "Launch Workflow",
+    "info": {
+      "title": "Description"
+    },
+    "params": {
+      "title": "Parameters"
+    }
   },
   "monitor": {
     "logs": {

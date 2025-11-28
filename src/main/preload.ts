@@ -40,5 +40,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   addProject: (repoPath: string) => ipcRenderer.invoke('add-project', repoPath),
   removeProject: (project: any) => ipcRenderer.invoke('remove-project', project),
   getInstallableReposList: () => ipcRenderer.invoke('get-installable-repos-list'),
-  addInstallableRepo: (repoUrl: string) => ipcRenderer.invoke('add-installable-repo', repoUrl)
+  addInstallableRepo: (repoUrl: string) => ipcRenderer.invoke('add-installable-repo', repoUrl),
+  getWorkflowInformation: (instance: any) =>
+    ipcRenderer.invoke('get-workflow-information', instance),
+  getWorkflowReadme: (instance: any) => ipcRenderer.invoke('get-workflow-readme', instance)
 });

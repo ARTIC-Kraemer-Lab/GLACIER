@@ -132,6 +132,9 @@ test('launch local workflow', async ({ page }) => {
   // Create an instance of the workflow (redirects to Parameters page)
   await page.click(`#collections-run-${cssEscape(repo_name)}`);
 
+  // Default display is Description, switch to Parameters tab
+  await page.click('#parameters-params-tab');
+
   // Set sleep time parameter
   await page.getByLabel('Sleep Time').fill('5'); // 5 second sleep
   await page.getByLabel('Sleep Time').blur();

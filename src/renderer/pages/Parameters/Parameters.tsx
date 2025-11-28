@@ -26,6 +26,8 @@ import { buildUISchema } from './buildUISchema';
 import { renderers } from './renderers';
 import { API } from '../../services/api.js';
 import { useTranslation } from 'react-i18next';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const ajv = new Ajv({
   useDefaults: true, // populate all fields (if not provided)
@@ -56,6 +58,8 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
 
   const [params, setParams] = useState<Record<string, unknown>>({});
   const [schema, setSchema] = useState<Record<string, unknown> | null>({});
+  const [tabSelected, setTabSelected] = React.useState(0);
+  const [readme, setReadme] = useState<string>('');
 
   const onLaunch = async (instance, params) => {
     // Strip out profile from params before sending to backend
@@ -95,10 +99,15 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
         setParams(data);
       }
     };
+    const fetchReadme = async () => {
+      const desc = await API.getWorkflowReadme(instance);
+      setReadme(desc || '');
+    };
 
     get_available_profiles().then((profiles) => {
       get_schema(profiles);
       get_params();
+      fetchReadme();
     });
   }, [instance]);
 
@@ -122,6 +131,10 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
     return Object.keys(obj).length === 0;
   };
 
+  const handleTabChange = (event, newValue) => {
+    setTabSelected(newValue);
+  };
+
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center">
@@ -136,22 +149,34 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
           {t('parameters.launch-workflow')}
         </Button>
       </Box>
-      <Stack spacing={2} sx={{ mt: 1 }}>
-        <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-          {!isEmpty(schema) ? (
-            <JsonForms
-              schema={schema}
-              uischema={uischema}
-              data={params}
-              renderers={renderers}
-              onChange={({ data, errors }) => setParams(data)}
-              ajv={ajv}
-            />
-          ) : (
-            <Typography>No parameters.</Typography>
-          )}
-        </Paper>
-      </Stack>
+
+      <Tabs value={tabSelected} onChange={handleTabChange}>
+        <Tab label={t('parameters.info.title')} id="parameters-info-tab" />
+        <Tab label={t('parameters.params.title')} id="parameters-params-tab" />
+      </Tabs>
+
+      <TabPanel value={tabSelected} index={0}>
+        <Markdown remarkPlugins={[remarkGfm]}>{readme}</Markdown>
+      </TabPanel>
+
+      <TabPanel value={tabSelected} index={1}>
+        <Stack spacing={2} sx={{ mt: 1 }}>
+          <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+            {!isEmpty(schema) ? (
+              <JsonForms
+                schema={schema}
+                uischema={uischema}
+                data={params}
+                renderers={renderers}
+                onChange={({ data, errors }) => setParams(data)}
+                ajv={ajv}
+              />
+            ) : (
+              <Typography>No parameters.</Typography>
+            )}
+          </Paper>
+        </Stack>
+      </TabPanel>
     </Box>
   );
 }

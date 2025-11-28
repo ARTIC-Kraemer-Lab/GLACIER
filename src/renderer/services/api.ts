@@ -40,7 +40,9 @@ const electronAPI = isElectron
       addProject: (repoPath) => window.electronAPI.addProject(repoPath),
       removeProject: (project) => window.electronAPI.removeProject(project),
       getInstallableReposList: () => window.electronAPI.getInstallableReposList(),
-      addInstallableRepo: (repoUrl) => window.electronAPI.addInstallableRepo(repoUrl)
+      addInstallableRepo: (repoUrl) => window.electronAPI.addInstallableRepo(repoUrl),
+      getWorkflowInformation: (instance) => window.electronAPI.getWorkflowInformation(instance),
+      getWorkflowReadme: (instance) => window.electronAPI.getWorkflowReadme(instance)
     }
   : null;
 
@@ -106,7 +108,11 @@ const httpAPI = {
   removeProject: async (project) => httpDispatch('/api/remove-project', 'POST', { project }),
   getInstallableReposList: async () => httpDispatch('/api/get-installable-repos-list', 'POST', {}),
   addInstallableRepo: async (repoUrl) =>
-    httpDispatch('/api/add-installable-repo', 'POST', { repoUrl })
+    httpDispatch('/api/add-installable-repo', 'POST', { repoUrl }),
+  getWorkflowInformation: async (instance) =>
+    httpDispatch('/api/get-workflow-information', 'POST', { instance }),
+  getWorkflowReadme: async (instance) =>
+    httpDispatch('/api/get-workflow-readme', 'POST', { instance })
 };
 
 export const API = isElectron ? electronAPI : httpAPI;

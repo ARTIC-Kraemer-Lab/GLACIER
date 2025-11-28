@@ -43,7 +43,13 @@
     "delete_confirm": "Êtes-vous sûr de vouloir supprimer cette instance ? Cette action est irréversible."
   },
   "parameters": {
-    "launch-workflow": "Lancer le flux de travail"
+    "launch-workflow": "Lancer le flux de travail",
+    "info": {
+      "title": "Description"
+    },
+    "params": {
+      "title": "Paramètres"
+    }
   },
   "monitor": {
     "logs": {

@@ -919,4 +919,41 @@ export class Collection {
     });
     return '';
   }
+
+  getWorkflowInformation(instance: IWorkflowVersion): Record<string, string> {
+    if (!instance || !instance.path) {
+      return { error: 'Invalid workflow instance.' };
+    }
+
+    let title = '';
+    let description = '';
+
+    // Read schema file
+    const schemaFile = path.join(instance.path, 'nextflow_schema.json');
+    if (fs.existsSync(schemaFile)) {
+      const schema = JSON.parse(fs.readFileSync(schemaFile, 'utf-8'));
+      title = schema.title || instance.name;
+      description = schema.description || '';
+    } else {
+      title = instance.name;
+      description = '';
+    }
+
+    const info: Record<string, string> = {};
+    info['title'] = title;
+    info['description'] = description;
+    return info;
+  }
+
+  getWorkflowReadme(instance: IWorkflowInstance): string {
+    if (!instance || !instance.workflow_version) {
+      return 'Invalid workflow instance.';
+    }
+    const readmeFile = path.join(instance.workflow_version.path, 'README.md');
+    if (fs.existsSync(readmeFile)) {
+      return fs.readFileSync(readmeFile, 'utf-8');
+    } else {
+      return 'No README.md found for this workflow.';
+    }
+  }
 }
