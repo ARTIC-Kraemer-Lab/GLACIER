@@ -141,6 +141,10 @@ app.post('/api/add-installable-repo', async (req, res) =>
   post_response(res, collection.addInstallableRepo(req.body.repoUrl))
 );
 
+app.post('/api/get-workflow-description', async (req, res) =>
+  post_response(res, collection.getWorkflowDescription(req.instance))
+);
+
 const PORT = process.env.PORT || 3030;
 app.listen(PORT, () => {
   console.log(`✅ API server listening on http://localhost:${PORT}`);

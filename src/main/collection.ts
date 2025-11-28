@@ -919,4 +919,16 @@ export class Collection {
     });
     return '';
   }
+
+  getWorkflowDescription(instance: IWorkflowInstance): string {
+    if (!instance || !instance.workflow_version) {
+      return 'Invalid workflow instance.';
+    }
+    const readmeFile = path.join(instance.workflow_version.path, 'README.md');
+    if (fs.existsSync(readmeFile)) {
+      return fs.readFileSync(readmeFile, 'utf-8');
+    } else {
+      return 'No README.md found for this workflow.';
+    }
+  }
 }

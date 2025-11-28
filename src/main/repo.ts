@@ -129,7 +129,7 @@ export async function getRepoTags(url: string) {
     const info = await git.getRemoteInfo({ http, url: full_url });
     return Object.keys(info.refs.tags).reverse();
   } catch (err) {
-    console.error(`Failed to fetch tags from ${url}:`, err);
+    console.info(`Failed to fetch tags from ${url}`);
     return [];
   }
 }
@@ -140,7 +140,7 @@ export async function getRepoBranches(url: string) {
     const info = await git.getRemoteInfo({ http, url: full_url });
     return Object.keys(info.refs.heads);
   } catch (err) {
-    console.error(`Failed to fetch branches from ${url}:`, err);
+    console.info(`Failed to fetch branches from ${url}`);
     return [];
   }
 }

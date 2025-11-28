@@ -118,4 +118,8 @@ export function registerIpcHandlers() {
   ipcMain.handle('add-installable-repo', async (event, repoUrl) => {
     return collection.addInstallableRepo(repoUrl);
   });
+
+  ipcMain.handle('get-workflow-description', async (event, instance) => {
+    return collection.getWorkflowDescription(instance);
+  });
 }
