@@ -59,7 +59,7 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
   const [params, setParams] = useState<Record<string, unknown>>({});
   const [schema, setSchema] = useState<Record<string, unknown> | null>({});
   const [tabSelected, setTabSelected] = React.useState(0);
-  const [description, setDescription] = useState<string>('');
+  const [readme, setReadme] = useState<string>('');
 
   const onLaunch = async (instance, params) => {
     // Strip out profile from params before sending to backend
@@ -99,15 +99,15 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
         setParams(data);
       }
     };
-    const fetchDescription = async () => {
-      const desc = await API.getWorkflowDescription(instance);
-      setDescription(desc || '');
+    const fetchReadme = async () => {
+      const desc = await API.getWorkflowReadme(instance);
+      setReadme(desc || '');
     };
 
     get_available_profiles().then((profiles) => {
       get_schema(profiles);
       get_params();
-      fetchDescription();
+      fetchReadme();
     });
   }, [instance]);
 
@@ -156,7 +156,7 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
       </Tabs>
 
       <TabPanel value={tabSelected} index={0}>
-        <Markdown remarkPlugins={[remarkGfm]}>{description}</Markdown>
+        <Markdown remarkPlugins={[remarkGfm]}>{readme}</Markdown>
       </TabPanel>
 
       <TabPanel value={tabSelected} index={1}>

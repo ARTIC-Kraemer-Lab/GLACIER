@@ -31,12 +31,26 @@ export default function LibraryPage({
   const [repos, setRepos] = useState([]);
   const [open, setOpen] = useState(false);
 
+  const getRepos = async () => {
+    const list = await API.getCollections();
+    const enriched = await Promise.all(
+      list.map(async (repo) => {
+        const info = await API.getWorkflowInformation(repo);
+        return {
+          ...repo,
+          info: {
+            ...(repo.info ?? {}),
+            title: info.title || repo.name,
+            description: info.description || ''
+          }
+        };
+      })
+    );
+    setRepos(enriched);
+  };
+
   useEffect(() => {
-    (async () => {
-      const list = await API.getCollections();
-      console.log('Fetched collections:', list);
-      setRepos(list);
-    })();
+    getRepos();
   }, []);
 
   const onClickSync = async (repo) => {
@@ -63,9 +77,12 @@ export default function LibraryPage({
             /* @ts-ignore */
             <Grid item xs={12} sm={6} md={4} key={repo.path}>
               <Paper variant="outlined" sx={{ p: 2 }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  {repo.name} ({repo.version})
+                <Typography variant="h5">{repo.info.title}</Typography>
+                <Typography variant="subtitle1">
+                  {repo.name} @ {repo.version}
                 </Typography>
+                <Typography variant="caption">{repo.info.description}</Typography>
+                <Box sx={{ height: 8 }} />
                 <Stack direction="row" spacing={1}>
                   <Button
                     id={`collections-run-${repo.name}`}

@@ -920,7 +920,32 @@ export class Collection {
     return '';
   }
 
-  getWorkflowDescription(instance: IWorkflowInstance): string {
+  getWorkflowInformation(instance: IWorkflowVersion): Record<string, string> {
+    if (!instance || !instance.path) {
+      return { error: 'Invalid workflow instance.' };
+    }
+
+    let title = '';
+    let description = '';
+
+    // Read schema file
+    const schemaFile = path.join(instance.path, 'nextflow_schema.json');
+    if (fs.existsSync(schemaFile)) {
+      const schema = JSON.parse(fs.readFileSync(schemaFile, 'utf-8'));
+      title = schema.title || instance.name;
+      description = schema.description || '';
+    } else {
+      title = instance.name;
+      description = '';
+    }
+
+    const info: Record<string, string> = {};
+    info['title'] = title;
+    info['description'] = description;
+    return info;
+  }
+
+  getWorkflowReadme(instance: IWorkflowInstance): string {
     if (!instance || !instance.workflow_version) {
       return 'Invalid workflow instance.';
     }
