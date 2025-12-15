@@ -15,6 +15,8 @@ export const directoryPathTester = rankWith(
   6,
   and(
     isControl,
-    schemaMatches((s) => s?.type === 'string' && s?.format === 'directory-path')
+    schemaMatches(
+      (s) => s?.type === 'string' && (s?.format === 'directory-path' || s?.format === 'path')
+    )
   )
 );

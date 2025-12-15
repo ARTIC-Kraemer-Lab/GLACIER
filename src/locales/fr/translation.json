@@ -93,6 +93,8 @@
     "allow-arbitrary-repo-cloning": "Autoriser le clonage de dépôts arbitraires",
     "language-select": "Langue",
     "visual-options": "Visuelles",
+    "advanced-options": "Avancées",
+    "disable-schema-validation": "Désactiver la validation stricte du schéma",
     "project-options": "Projets",
     "projects": {
       "url": "URL",

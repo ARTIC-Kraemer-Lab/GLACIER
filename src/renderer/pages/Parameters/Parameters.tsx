@@ -56,6 +56,8 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
   const { t } = useTranslation();
   const default_profile = 'standard';
 
+  const [disableSchemaValidation, setDisableSchemaValidation] = useState<boolean>(false);
+
   const [params, setParams] = useState<Record<string, unknown>>({});
   const [schema, setSchema] = useState<Record<string, unknown> | null>({});
   const [tabSelected, setTabSelected] = React.useState(0);
@@ -72,6 +74,9 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
   };
 
   useEffect(() => {
+    const getSettings = async () => {
+      setDisableSchemaValidation(await API.getDisableSchemaValidation());
+    };
     const get_available_profiles = async () => {
       const profiles = await API.getAvailableProfiles(instance);
       return profiles || [default_profile];
@@ -105,6 +110,7 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
     };
 
     get_available_profiles().then((profiles) => {
+      getSettings();
       get_schema(profiles);
       get_params();
       fetchReadme();
@@ -112,13 +118,25 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
   }, [instance]);
 
   // Read schema and compile with AJV
-  const validate = useMemo(() => ajv.compile(schema), [schema]);
+  const validate = useMemo(() => {
+    if (disableSchemaValidation) {
+      // no-op validator
+      const fn: any = () => true;
+      fn.errors = null;
+      return fn;
+    }
+    return ajv.compile(schema);
+  }, [schema]);
 
   // Build the UI schema with stepper options
   const uischema = buildUISchema(schema, { showHidden: false });
   (uischema as any).options = { variant: 'stepper', showNavButtons: true };
 
   const schemaErrors: ErrorObject[] | null = useMemo(() => {
+    if (disableSchemaValidation) {
+      return null;
+    }
+
     try {
       validate(params);
       return validate.errors ?? null;
@@ -169,7 +187,7 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
                 data={params}
                 renderers={renderers}
                 onChange={({ data, errors }) => setParams(data)}
-                ajv={ajv}
+                ajv={disableSchemaValidation ? undefined : ajv}
               />
             ) : (
               <Typography>No parameters.</Typography>

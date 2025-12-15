@@ -93,6 +93,8 @@
     "allow-arbitrary-repo-cloning": "Allow arbitrary repository cloning",
     "language-select": "Language",
     "visual-options": "Visual",
+    "advanced-options": "Advanced",
+    "disable-schema-validation": "Disable strict schema validation",
     "project-options": "Projects",
     "projects": {
       "url": "URL",

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Box,
   Container,
@@ -7,6 +7,7 @@ import {
   FormControlLabel,
   TextField,
   Select,
+  Stack,
   MenuItem,
   Paper,
   Tab,
@@ -32,6 +33,7 @@ export default function SettingsPage({
 
   const [language, setLanguage] = React.useState(i18n.language || 'en');
   const [tabValue, setTabValue] = React.useState(0);
+  const [disableSchemaValidation, setDisableSchemaValidation] = React.useState(false);
 
   const handlePathChange = (e) => {
     const newPath = e.target.value;
@@ -46,6 +48,17 @@ export default function SettingsPage({
     setLanguage(newLang);
     i18n.changeLanguage(newLang);
   };
+
+  const handleDisableSchemaValidation = (value) => {
+    setDisableSchemaValidation(value);
+    API.setDisableSchemaValidation(value);
+  };
+
+  useEffect(() => {
+    API.getDisableSchemaValidation().then((value) => {
+      setDisableSchemaValidation(value);
+    });
+  }, []);
 
   const TabPanel = (props) => {
     const { children, value, index, ...other } = props;
@@ -86,6 +99,7 @@ export default function SettingsPage({
         <Tab id="settings-project-panel" label={t('settings.project-options')} />
         <Tab id="settings-visual-panel" label={t('settings.visual-options')} />
         <Tab id="settings-language-panel" label={t('settings.language-select')} />
+        <Tab id="settings-advanced-panel" label={t('settings.advanced-options')} />
       </Tabs>
 
       <TabPanel value={tabValue} index={0}>
@@ -135,6 +149,20 @@ export default function SettingsPage({
           <MenuItem value="en">English</MenuItem>
           <MenuItem value="fr">Français</MenuItem>
         </Select>
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={4}>
+        <Stack spacing={2}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={disableSchemaValidation}
+                onChange={() => handleDisableSchemaValidation(!disableSchemaValidation)}
+              />
+            }
+            label={t('settings.disable-schema-validation')}
+          />
+        </Stack>
       </TabPanel>
     </Paper>
   );
