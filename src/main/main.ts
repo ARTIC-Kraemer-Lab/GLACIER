@@ -55,3 +55,11 @@ ipcMain.handle('pick-directory', async () => {
   });
   return res.canceled ? null : (res.filePaths[0] ?? null);
 });
+
+ipcMain.handle('pick-file-or-directory', async (_, options) => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile', 'openDirectory'],
+    filters: options?.filters
+  });
+  return result.canceled ? null : (result.filePaths[0] ?? null);
+});

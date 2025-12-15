@@ -47,15 +47,46 @@ function InnerFilePathControl(props: ControlProps) {
     (uischema as any)?.options?.description ?? schema?.description ?? (schema as any)?.help_text;
 
   const showDesc = !isDescriptionHidden(visible, description, config);
-  const isDirectory = schema?.format === 'directory-path';
   const accept = (uischema as any)?.options?.accept as string | undefined;
 
+  type PickerMode = 'file' | 'directory' | 'both';
+
+  const picker: PickerMode = (() => {
+    switch (schema?.format) {
+      case 'directory-path':
+        return 'directory';
+      case 'file-path':
+        return 'file';
+      case 'path':
+        return 'both';
+      default:
+        return 'both';
+    }
+  })();
+
   const pick = async () => {
-    const filters = isDirectory ? undefined : toFilters(accept);
-    const picked = isDirectory
-      ? await window.electronAPI.pickDirectory()
-      : await window.electronAPI.pickFile(filters);
-    if (picked) handleChange(path, picked); // <-- store the OS path string
+    const accept = (uischema as any)?.options?.accept as string | undefined;
+    const filters = picker === 'directory' ? undefined : toFilters(accept);
+
+    let picked: string | undefined;
+
+    switch (picker) {
+      case 'directory':
+        picked = await window.electronAPI.pickDirectory();
+        break;
+
+      case 'file':
+        picked = await window.electronAPI.pickFile(filters);
+        break;
+
+      case 'both':
+        picked = await window.electronAPI.pickFileOrDirectory({ filters });
+        break;
+    }
+
+    if (picked) {
+      handleChange(path, picked);
+    }
   };
 
   return (
@@ -84,7 +115,7 @@ function InnerFilePathControl(props: ControlProps) {
       {/* Right: icon, top-aligned with the field */}
       <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
         <IconButton onClick={pick} disabled={!enabled}>
-          {isDirectory ? <FolderOpenIcon /> : <FileOpenIcon />}
+          {picker === 'directory' ? <FolderOpenIcon /> : <FileOpenIcon />}
         </IconButton>
       </Box>
     </Stack>
