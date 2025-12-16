@@ -126,4 +126,12 @@ export function registerIpcHandlers() {
   ipcMain.handle('get-workflow-readme', async (event, instance) => {
     return collection.getWorkflowReadme(instance);
   });
+
+  ipcMain.handle('get-disable-schema-validation', async (event) => {
+    return collection.getDisableSchemaValidation();
+  });
+
+  ipcMain.handle('set-disable-schema-validation', async (event, value: boolean) => {
+    return collection.setDisableSchemaValidation(value);
+  });
 }

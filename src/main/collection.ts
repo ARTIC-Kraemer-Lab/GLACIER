@@ -956,4 +956,12 @@ export class Collection {
       return 'No README.md found for this workflow.';
     }
   }
+
+  getDisableSchemaValidation(): boolean {
+    return store.get('disableSchemaValidation', false);
+  }
+
+  setDisableSchemaValidation(value: boolean) {
+    store.set('disableSchemaValidation', value);
+  }
 }

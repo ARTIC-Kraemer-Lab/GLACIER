@@ -149,6 +149,14 @@ app.post('/api/get-workflow-information', async (req, res) =>
   post_response(res, collection.getWorkflowInformation(req.instance))
 );
 
+app.post('/api/get-disable-schema-validation', async (req, res) =>
+  post_response(res, collection.getDisableSchemaValidation())
+);
+
+app.post('/api/set-disable-schema-validation', async (req, res) =>
+  post_response(res, collection.setDisableSchemaValidation(req.body.value))
+);
+
 const PORT = process.env.PORT || 3030;
 app.listen(PORT, () => {
   console.log(`✅ API server listening on http://localhost:${PORT}`);

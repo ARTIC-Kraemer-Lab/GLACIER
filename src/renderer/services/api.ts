@@ -42,7 +42,9 @@ const electronAPI = isElectron
       getInstallableReposList: () => window.electronAPI.getInstallableReposList(),
       addInstallableRepo: (repoUrl) => window.electronAPI.addInstallableRepo(repoUrl),
       getWorkflowInformation: (instance) => window.electronAPI.getWorkflowInformation(instance),
-      getWorkflowReadme: (instance) => window.electronAPI.getWorkflowReadme(instance)
+      getWorkflowReadme: (instance) => window.electronAPI.getWorkflowReadme(instance),
+      getDisableSchemaValidation: () => window.electronAPI.getDisableSchemaValidation(),
+      setDisableSchemaValidation: (value) => window.electronAPI.setDisableSchemaValidation(value)
     }
   : null;
 
@@ -112,7 +114,11 @@ const httpAPI = {
   getWorkflowInformation: async (instance) =>
     httpDispatch('/api/get-workflow-information', 'POST', { instance }),
   getWorkflowReadme: async (instance) =>
-    httpDispatch('/api/get-workflow-readme', 'POST', { instance })
+    httpDispatch('/api/get-workflow-readme', 'POST', { instance }),
+  getDisableSchemaValidation: async () =>
+    httpDispatch('/api/get-disable-schema-validation', 'POST', {}),
+  setDisableSchemaValidation: async (value) =>
+    httpDispatch('/api/set-disable-schema-validation', 'POST', { value })
 };
 
 export const API = isElectron ? electronAPI : httpAPI;
