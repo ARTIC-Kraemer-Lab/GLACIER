@@ -20,7 +20,7 @@
   "license": "ISC",
   "description": "",
   "build": {
-    "appId": "com.jsbrittain.GLACIER",
+    "appId": "com.ARTIC-Kraemer-Lab.GLACIER",
     "productName": "GLACIER",
     "directories": {
       "buildResources": "assets",
