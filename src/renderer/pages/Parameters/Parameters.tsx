@@ -24,6 +24,7 @@ import IconButton from '@mui/material/IconButton';
 import Ajv, { ErrorObject } from 'ajv'; // ajv is also used by jsonforms
 import { buildUISchema } from './buildUISchema';
 import { renderers } from './renderers';
+import { SettingsKey } from '../../../types/settings.js';
 import { API } from '../../services/api.js';
 import { useTranslation } from 'react-i18next';
 import Markdown from 'react-markdown';
@@ -75,7 +76,7 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
 
   useEffect(() => {
     const getSettings = async () => {
-      setDisableSchemaValidation(await API.getDisableSchemaValidation());
+      setDisableSchemaValidation(await API.settingsGet(SettingsKey.DisableSchemaValidation));
     };
     const get_available_profiles = async () => {
       const profiles = await API.getAvailableProfiles(instance);

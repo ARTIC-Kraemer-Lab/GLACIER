@@ -46,7 +46,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getWorkflowInformation: (instance: any) =>
     ipcRenderer.invoke('get-workflow-information', instance),
   getWorkflowReadme: (instance: any) => ipcRenderer.invoke('get-workflow-readme', instance),
-  getDisableSchemaValidation: () => ipcRenderer.invoke('get-disable-schema-validation'),
-  setDisableSchemaValidation: (disable: boolean) =>
-    ipcRenderer.invoke('set-disable-schema-validation', disable)
+  settingsGet: (key: string) => ipcRenderer.invoke('settings-get', key),
+  settingsSet: (key: string, value: any) => ipcRenderer.invoke('settings-set', key, value)
 });

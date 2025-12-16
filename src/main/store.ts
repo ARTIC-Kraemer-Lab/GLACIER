@@ -1,7 +1,10 @@
 import Store from 'electron-store';
 
-interface StoreSchema {
+// Keep in sync with types/settings.js
+export interface StoreSchema {
   collectionsPath: string;
+  disableProjects: boolean;
+  disableSchemaValidation: boolean;
 }
 
 const store = new Store<StoreSchema>({
@@ -9,6 +12,14 @@ const store = new Store<StoreSchema>({
     collectionsPath: {
       type: 'string',
       default: ''
+    },
+    disableProjects: {
+      type: 'boolean',
+      default: true
+    },
+    disableSchemaValidation: {
+      type: 'boolean',
+      default: false
     }
   },
   name: 'GLACIER'

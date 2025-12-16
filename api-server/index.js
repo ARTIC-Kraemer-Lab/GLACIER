@@ -146,15 +146,13 @@ app.post('/api/get-workflow-readme', async (req, res) =>
 );
 
 app.post('/api/get-workflow-information', async (req, res) =>
-  post_response(res, collection.getWorkflowInformation(req.instance))
+  post_response(res, collection.getWorkflowInformation(req.body.instance))
 );
 
-app.post('/api/get-disable-schema-validation', async (req, res) =>
-  post_response(res, collection.getDisableSchemaValidation())
-);
+app.post('/api/settings-get', async (req, res) => post_response(res, collection.settingsGet()));
 
-app.post('/api/set-disable-schema-validation', async (req, res) =>
-  post_response(res, collection.setDisableSchemaValidation(req.body.value))
+app.post('/api/settings-set', async (req, res) =>
+  post_response(res, collection.settingsSet(req.body.value))
 );
 
 const PORT = process.env.PORT || 3030;

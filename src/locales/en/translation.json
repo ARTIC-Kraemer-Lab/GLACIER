@@ -94,6 +94,7 @@
     "language-select": "Language",
     "visual-options": "Visual",
     "advanced-options": "Advanced",
+    "disable-projects": "Disable projects",
     "disable-schema-validation": "Disable strict schema validation",
     "project-options": "Projects",
     "projects": {

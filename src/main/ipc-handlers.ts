@@ -4,6 +4,7 @@ import git from 'isomorphic-git';
 import http from 'isomorphic-git/http/node/index.cjs';
 import { ipcMain } from 'electron';
 import { Collection } from './collection.js';
+import { StoreSchema } from './settings.js';
 
 const collection = Collection.getInstance();
 
@@ -127,11 +128,14 @@ export function registerIpcHandlers() {
     return collection.getWorkflowReadme(instance);
   });
 
-  ipcMain.handle('get-disable-schema-validation', async (event) => {
-    return collection.getDisableSchemaValidation();
+  ipcMain.handle('settings-get', async (event, key: keyof StoreSchema) => {
+    return collection.settingsGet(key);
   });
 
-  ipcMain.handle('set-disable-schema-validation', async (event, value: boolean) => {
-    return collection.setDisableSchemaValidation(value);
-  });
+  ipcMain.handle(
+    'settings-set',
+    async (event, key: keyof StoreSchema, value: StoreSchema[keyof StoreSchema]) => {
+      return collection.settingsSet(key, value);
+    }
+  );
 }
