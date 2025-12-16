@@ -94,6 +94,7 @@
     "language-select": "Langue",
     "visual-options": "Visuelles",
     "advanced-options": "Avancées",
+    "disable-projects": "Désactiver la gestion des projets",
     "disable-schema-validation": "Désactiver la validation stricte du schéma",
     "project-options": "Projets",
     "projects": {

@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import ProjectsList from './ProjectsList.js';
 import { API } from '../../services/api.js';
+import { SettingsKey } from '../../../types/settings.js';
 import { useTranslation } from 'react-i18next';
 
 export default function SettingsPage({
@@ -33,6 +34,7 @@ export default function SettingsPage({
 
   const [language, setLanguage] = React.useState(i18n.language || 'en');
   const [tabValue, setTabValue] = React.useState(0);
+  const [disableProjects, setDisableProjects] = React.useState(false);
   const [disableSchemaValidation, setDisableSchemaValidation] = React.useState(false);
 
   const handlePathChange = (e) => {
@@ -49,14 +51,22 @@ export default function SettingsPage({
     i18n.changeLanguage(newLang);
   };
 
+  const handleDisableProjects = (value) => {
+    setDisableProjects(value);
+    API.settingsSet(SettingsKey.DisableProjects, value);
+  };
+
   const handleDisableSchemaValidation = (value) => {
     setDisableSchemaValidation(value);
-    API.setDisableSchemaValidation(value);
+    API.settingsSet(SettingsKey.DisableSchemaValidation, value);
   };
 
   useEffect(() => {
-    API.getDisableSchemaValidation().then((value) => {
+    API.settingsGet(SettingsKey.DisableSchemaValidation).then((value) => {
       setDisableSchemaValidation(value);
+    });
+    API.settingsGet(SettingsKey.DisableProjects).then((value) => {
+      setDisableProjects(value);
     });
   }, []);
 
@@ -96,7 +106,11 @@ export default function SettingsPage({
         sx={{ borderRight: 1, borderColor: 'divider' }}
       >
         <Tab id="settings-general-panel" label={t('settings.general')} />
-        <Tab id="settings-project-panel" label={t('settings.project-options')} />
+        <Tab
+          id="settings-project-panel"
+          label={t('settings.project-options')}
+          disabled={disableProjects}
+        />
         <Tab id="settings-visual-panel" label={t('settings.visual-options')} />
         <Tab id="settings-language-panel" label={t('settings.language-select')} />
         <Tab id="settings-advanced-panel" label={t('settings.advanced-options')} />
@@ -153,6 +167,15 @@ export default function SettingsPage({
 
       <TabPanel value={tabValue} index={4}>
         <Stack spacing={2}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={disableProjects}
+                onChange={() => handleDisableProjects(!disableProjects)}
+              />
+            }
+            label={t('settings.disable-projects')}
+          />
           <FormControlLabel
             control={
               <Switch

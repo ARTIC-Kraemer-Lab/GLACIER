@@ -11,7 +11,7 @@ import { runWorkflow } from './runner.js';
 import { WorkflowStatus } from '../types/types.js';
 import { syncRepo, getWorkflowParams, getWorkflowSchema } from './repo.js';
 import { getCollectionsPath, getDefaultCollectionsDir, locateReports } from './paths.js';
-import store from './store.js';
+import { settings, StoreSchema } from './settings.js';
 
 // Should remove imports from specific runners
 import { getAvailableProfiles as getAvailableProfiles_Nextflow } from '../runners/nextflow/nextflow.js';
@@ -753,7 +753,7 @@ export class Collection {
 
   async setCollectionsPath(path: string) {
     this.root_path = path;
-    store.set('collectionsPath', path);
+    settings.set('collectionsPath', path);
     // Reparse collection
     await this.parseCollection();
   }
@@ -867,9 +867,6 @@ export class Collection {
   }
 
   addProject(repoPath: string): string {
-    // return text string on error
-    return 'Adding projects is not currently supported.';
-
     // /// Replace with repo parsing logic ///
     const i = this.projects.length + 1;
     this.projects.push(
@@ -957,11 +954,11 @@ export class Collection {
     }
   }
 
-  getDisableSchemaValidation(): boolean {
-    return store.get('disableSchemaValidation', false);
+  settingsGet<K extends keyof StoreSchema>(key: K): StoreSchema[K] {
+    return settings.get(key);
   }
 
-  setDisableSchemaValidation(value: boolean) {
-    store.set('disableSchemaValidation', value);
+  settingsSet<K extends keyof StoreSchema>(key: K, value: StoreSchema[K]): void {
+    settings.set(key, value);
   }
 }
