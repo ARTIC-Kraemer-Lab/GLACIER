@@ -89,11 +89,19 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
           schema['properties'] = {};
         }
         schema['properties']['profile'] = {
-          type: 'string',
-          title: 'Execution Profile',
-          description: 'Select the execution profile to use',
-          enum: profiles,
-          default: profiles.includes(default_profile) ? default_profile : profiles[0]
+          type: 'array',
+          title: 'Execution Profile(s)',
+          description: 'Select one or more execution profile to use',
+          items: {
+            type: 'string',
+            enum: profiles
+          },
+          uniqueItems: true,
+          default: profiles.includes(default_profile)
+            ? [default_profile]
+            : profiles.length > 0
+              ? [profiles[0]]
+              : []
         };
       }
       setSchema(schema);

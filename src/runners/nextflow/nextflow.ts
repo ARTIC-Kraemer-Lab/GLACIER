@@ -203,14 +203,48 @@ export async function getAvailableProfiles(instance: IWorkflowInstance): Promise
     const profilesBlock = txt.slice(openBraceIdx + 1, endIdx);
 
     // Match profile names: support unquoted (name {) and quoted ('name' { or "name" {)
-    const profileNameRe = /(?:"([^"]+)"|'([^']+)'|([A-Za-z0-9_\-]+))\s*\{/g;
     const profiles = new Set<string>();
-    let m: RegExpExecArray | null;
-    while ((m = profileNameRe.exec(profilesBlock)) !== null) {
-      const name = m[1] ?? m[2] ?? m[3];
-      if (name && name.trim().length > 0) profiles.add(name.trim());
-    }
 
+    depth = 0;
+    let token = '';
+    let inLineComment = false;
+
+    for (let i = 0; i < profilesBlock.length; i++) {
+      const ch = profilesBlock[i];
+      const next = profilesBlock[i + 1];
+
+      // detect // comment start
+      if (!inLineComment && ch === '/' && next === '/') {
+        inLineComment = true;
+        i++; // skip second '/'
+        continue;
+      }
+
+      // end comment at newline
+      if (inLineComment) {
+        if (ch === '\n') {
+          inLineComment = false;
+        }
+        continue;
+      }
+
+      if (ch === '{') {
+        if (depth === 0) {
+          const name = token.trim().replace(/^['"]|['"]$/g, '');
+
+          if (name.length > 0) {
+            profiles.add(name);
+          }
+        }
+        depth++;
+        token = '';
+      } else if (ch === '}') {
+        depth--;
+        token = '';
+      } else if (depth === 0) {
+        token += ch;
+      }
+    }
     // Always include 'standard' if it's not present (Nextflow assumes it as default profile)
     if (!profiles.has('standard')) {
       profiles.add('standard');
