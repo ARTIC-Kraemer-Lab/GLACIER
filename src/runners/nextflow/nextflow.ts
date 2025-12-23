@@ -93,7 +93,9 @@ export async function runWorkflow(
       '-profile',
       profile,
       '-params-file',
-      toPosixPath(paramsFile)
+      toPosixPath(paramsFile),
+      '-name',
+      name
     ];
     if (resume) {
       args.push('-resume');
@@ -132,7 +134,9 @@ export async function runWorkflow(
     '-profile',
     profile,
     '-params-file',
-    toPosixPath(paramsFile)
+    toPosixPath(paramsFile),
+    '-name',
+    name
   ];
   if (resume) {
     cmd.push('-resume');
