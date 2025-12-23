@@ -48,7 +48,12 @@ export default function HtmlReports({ instance }) {
               <MenuItem key={report.id} value={report.id}>
                 {report.name}{' '}
                 <Typography variant="caption" sx={{ ml: 1, color: 'gray' }}>
-                  ({report.path})
+                  (
+                  {
+                    // remove filename from shortPath
+                    report.shortPath ? report.shortPath.split('/').slice(0, -1).join('/') : ''
+                  }
+                  )
                 </Typography>
               </MenuItem>
             ))}
