@@ -1,6 +1,9 @@
 {
   "glacier": "GLACIER",
   "container-started": "Conteneur construit et démarré avec l'ID",
+  "common": {
+    "cancel": "Annuler"
+  },
   "sidebar": {
     "hub": "Hub",
     "library": "Bibliothèque",
@@ -48,8 +51,14 @@
       "title": "Description"
     },
     "params": {
-      "title": "Paramètres"
-    }
+      "title": "Paramètres",
+      "no-parameters": "Aucun paramètre requis pour ce flux de travail."
+    },
+    "test-launch-dropdown": "Test",
+    "test-launch-title": "Options de test",
+    "test-launch-instructions": "Sélectionnez des profils supplémentaires pour lancer le flux de travail de test (par défaut `docker` si présent).",
+    "additional-test-profiles": "Profils de test supplémentaires",
+    "test-launch-workflow": "Exécuter"
   },
   "monitor": {
     "logs": {
