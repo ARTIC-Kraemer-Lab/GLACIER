@@ -31,7 +31,8 @@ export function locateReports(reportsDir: string): Record<string, string>[] {
         reportFiles.push({
           id: (reportFiles.length + 1).toString(),
           name: path.basename(file, '.html'),
-          path: fullPath
+          path: fullPath,
+          shortPath: path.relative(reportsDir, fullPath)
         });
       }
     }
