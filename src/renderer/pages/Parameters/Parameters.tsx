@@ -24,6 +24,7 @@ import IconButton from '@mui/material/IconButton';
 import Ajv, { ErrorObject } from 'ajv'; // ajv is also used by jsonforms
 import { buildUISchema } from './buildUISchema';
 import { renderers } from './renderers';
+import TestRunDialog from './TestRunDialog.js';
 import { SettingsKey } from '../../../types/settings.js';
 import { API } from '../../services/api.js';
 import { useTranslation } from 'react-i18next';
@@ -61,6 +62,7 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
 
   const [params, setParams] = useState<Record<string, unknown>>({});
   const [schema, setSchema] = useState<Record<string, unknown> | null>({});
+  const [allProfiles, setAllProfiles] = useState<string[]>([]);
   const [tabSelected, setTabSelected] = React.useState(0);
   const [readme, setReadme] = useState<string>('');
 
@@ -74,12 +76,20 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
     refreshInstancesList();
   };
 
+  const onTestLaunchWorkflow = async (testProfiles) => {
+    const test_profiles_str = testProfiles.join(',');
+    const id = await API.runWorkflow(instance, {}, { profile: test_profiles_str });
+    logMessage(`Launched test workflow ${instance.name}`);
+    refreshInstancesList();
+  };
+
   useEffect(() => {
     const getSettings = async () => {
       setDisableSchemaValidation(await API.settingsGet(SettingsKey.DisableSchemaValidation));
     };
     const get_available_profiles = async () => {
       const profiles = await API.getAvailableProfiles(instance);
+      setAllProfiles(profiles || []);
       return profiles || [default_profile];
     };
     const get_schema = async (profiles: string[]) => {
@@ -168,13 +178,18 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
         <Typography variant="h6">
           [{instance.name}] {instance.workflow_version.name}
         </Typography>
-        <Button
-          disabled={schemaErrors !== null}
-          variant="contained"
-          onClick={() => onLaunch(instance, params)}
-        >
-          {t('parameters.launch-workflow')}
-        </Button>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Button
+            disabled={schemaErrors !== null}
+            variant="contained"
+            onClick={() => onLaunch(instance, params)}
+          >
+            {t('parameters.launch-workflow')}
+          </Button>
+          {allProfiles.includes('test') && (
+            <TestRunDialog allProfiles={allProfiles} onLaunch={onTestLaunchWorkflow} />
+          )}
+        </Box>
       </Box>
 
       <Tabs value={tabSelected} onChange={handleTabChange}>
@@ -199,7 +214,7 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
                 ajv={disableSchemaValidation ? undefined : ajv}
               />
             ) : (
-              <Typography>No parameters.</Typography>
+              <Typography>{t('parameters.params.no-parameters')}</Typography>
             )}
           </Paper>
         </Stack>

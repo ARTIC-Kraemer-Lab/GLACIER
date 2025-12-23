@@ -1,6 +1,9 @@
 {
   "glacier": "GLACIER",
   "container-started": "Container built and started with ID",
+  "common": {
+    "cancel": "Cancel"
+  },
   "sidebar": {
     "hub": "Hub",
     "library": "Library",
@@ -48,8 +51,14 @@
       "title": "Description"
     },
     "params": {
-      "title": "Parameters"
-    }
+      "title": "Parameters",
+      "no-parameters": "No parameters available"
+    },
+    "test-launch-dropdown": "Test",
+    "test-launch-title": "Test Options",
+    "test-launch-instructions": "Select additional profiles to launch the test workflow with (default `docker` if present).",
+    "additional-test-profiles": "Additional Test Profiles",
+    "test-launch-workflow": "Run"
   },
   "monitor": {
     "logs": {
