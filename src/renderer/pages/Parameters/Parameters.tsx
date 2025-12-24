@@ -24,12 +24,11 @@ import IconButton from '@mui/material/IconButton';
 import Ajv, { ErrorObject } from 'ajv'; // ajv is also used by jsonforms
 import { buildUISchema } from './buildUISchema';
 import { renderers } from './renderers';
+import MarkdownRenderer from './MarkdownRenderer';
 import TestRunDialog from './TestRunDialog.js';
 import { SettingsKey } from '../../../types/settings.js';
 import { API } from '../../services/api.js';
 import { useTranslation } from 'react-i18next';
-import Markdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 
 const ajv = new Ajv({
   useDefaults: true, // populate all fields (if not provided)
@@ -50,6 +49,7 @@ ajv.addFormat('path', {
   type: 'string',
   validate: (v: string) => typeof v === 'string' && v.length > 0
 });
+
 function TabPanel({ children, value, index }) {
   return value === index ? <Box sx={{ p: 2, flexGrow: 1 }}>{children}</Box> : null;
 }
@@ -198,7 +198,7 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
       </Tabs>
 
       <TabPanel value={tabSelected} index={0}>
-        <Markdown remarkPlugins={[remarkGfm]}>{readme}</Markdown>
+        <MarkdownRenderer content={readme} basePath={instance.workflow_version.path} />
       </TabPanel>
 
       <TabPanel value={tabSelected} index={1}>

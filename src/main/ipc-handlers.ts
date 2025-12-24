@@ -138,4 +138,8 @@ export function registerIpcHandlers() {
       return collection.settingsSet(key, value);
     }
   );
+
+  ipcMain.handle('open-web-page', async (event, url: string) => {
+    return collection.openWebPage(url);
+  });
 }
