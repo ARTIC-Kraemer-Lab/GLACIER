@@ -270,7 +270,6 @@ export default function MainPage({ darkMode, setDarkMode }) {
                 setAllowArbitraryRepoCloning={setAllowArbitraryRepoCloning}
                 projectsList={projectsList}
                 getProjectsList={getProjectsList}
-                refreshInstancesList={refreshInstancesList}
                 logMessage={logMessage}
               />
             ) : null}

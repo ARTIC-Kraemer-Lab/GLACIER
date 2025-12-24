@@ -27,7 +27,6 @@ export default function SettingsPage({
   setAllowArbitraryRepoCloning,
   projectsList,
   getProjectsList,
-  refreshInstancesList,
   logMessage
 }) {
   const { t, i18n } = useTranslation();
@@ -41,7 +40,7 @@ export default function SettingsPage({
     const newPath = e.target.value;
     setCollectionsPath(newPath);
     API.setCollectionsPath(newPath).then(() => {
-      refreshInstancesList();
+      console.log('Collections path updated to', newPath);
     });
   };
 
