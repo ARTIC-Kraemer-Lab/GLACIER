@@ -118,7 +118,9 @@ test('launch local workflow', async ({ page }) => {
 
   // Force refresh of workflows (change collections-path twice)
   await page.fill('#settings-collections-path', library_path + '_temp');
+  await page.locator('#settings-collections-path').blur(); // trigger change event
   await page.fill('#settings-collections-path', library_path);
+  await page.locator('#settings-collections-path').blur();
 
   // --- Navigate to Library page
   await page.click('#sidebar-library-button');

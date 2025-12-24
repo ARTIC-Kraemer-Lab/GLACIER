@@ -31,18 +31,26 @@ export default function SettingsPage({
 }) {
   const { t, i18n } = useTranslation();
 
+  const pathRef = React.useRef(null);
   const [language, setLanguage] = React.useState(i18n.language || 'en');
   const [tabValue, setTabValue] = React.useState(0);
   const [disableProjects, setDisableProjects] = React.useState(false);
   const [disableSchemaValidation, setDisableSchemaValidation] = React.useState(false);
 
-  const handlePathChange = (e) => {
-    const newPath = e.target.value;
-    setCollectionsPath(newPath);
-    API.setCollectionsPath(newPath).then(() => {
-      console.log('Collections path updated to', newPath);
-    });
+  const handlePathKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handlePathBlur();
+      e.target.blur();
+    }
   };
+
+  const handlePathBlur = () => {
+    const newPath = pathRef.current?.value ?? '';
+    if (newPath === collectionsPath) return;
+    setCollectionsPath(newPath);
+    API.setCollectionsPath(newPath).then(() => { console.log(`Collections path updated: ${newPath}`); });
+  }
 
   const handleLanguageChange = (e) => {
     const newLang = e.target.value;
@@ -67,6 +75,9 @@ export default function SettingsPage({
     API.settingsGet(SettingsKey.DisableProjects).then((value) => {
       setDisableProjects(value);
     });
+    if (pathRef.current && document.activeElement !== pathRef.current) {
+      pathRef.current.value = collectionsPath ?? '';
+    }
   }, []);
 
   const TabPanel = (props) => {
@@ -118,10 +129,12 @@ export default function SettingsPage({
       <TabPanel value={tabValue} index={0}>
         <TextField
           id="settings-collections-path"
+          inputRef={pathRef}
           label={t('settings.collections-path')}
           fullWidth
-          value={collectionsPath}
-          onChange={handlePathChange}
+          defaultValue={collectionsPath}
+          onKeyDown={handlePathKeyDown}
+          onBlur={handlePathBlur}
           sx={{ mt: 2 }}
         />
 
