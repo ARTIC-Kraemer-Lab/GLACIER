@@ -155,6 +155,10 @@ app.post('/api/settings-set', async (req, res) =>
   post_response(res, collection.settingsSet(req.body.value))
 );
 
+app.post('/api/open-web-page', async (req, res) =>
+  post_response(res, collection.openWebPage(req.body.url))
+);
+
 const PORT = process.env.PORT || 3030;
 app.listen(PORT, () => {
   console.log(`✅ API server listening on http://localhost:${PORT}`);

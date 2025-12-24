@@ -961,4 +961,8 @@ export class Collection {
   settingsSet<K extends keyof StoreSchema>(key: K, value: StoreSchema[K]): void {
     settings.set(key, value);
   }
+
+  openWebPage(url: string) {
+    shell.openExternal(url);
+  }
 }
