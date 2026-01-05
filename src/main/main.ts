@@ -15,6 +15,7 @@ function createWindow() {
   win = new BrowserWindow({
     width: Math.round(width * 0.8),
     height: Math.round(height * 0.8),
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, './preload.js'),
       contextIsolation: true,
