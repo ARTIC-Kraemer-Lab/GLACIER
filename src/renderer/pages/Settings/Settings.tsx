@@ -14,8 +14,10 @@ import {
   Tabs
 } from '@mui/material';
 import ProjectsList from './ProjectsList.js';
+import EnvironmentPage from './Environment.js';
 import { API } from '../../services/api.js';
 import { SettingsKey } from '../../../types/settings.js';
+import { EnvironmentKey } from '../../../types/environment.js';
 import { useTranslation } from 'react-i18next';
 
 export default function SettingsPage({
@@ -36,6 +38,7 @@ export default function SettingsPage({
   const [tabValue, setTabValue] = React.useState(0);
   const [disableProjects, setDisableProjects] = React.useState(false);
   const [disableSchemaValidation, setDisableSchemaValidation] = React.useState(false);
+  const [nextflowStatus, setNextflowStatus] = React.useState([]);
 
   const handlePathKeyDown = (e) => {
     if (e.key === 'Enter') {
@@ -49,8 +52,10 @@ export default function SettingsPage({
     const newPath = pathRef.current?.value ?? '';
     if (newPath === collectionsPath) return;
     setCollectionsPath(newPath);
-    API.setCollectionsPath(newPath).then(() => { console.log(`Collections path updated: ${newPath}`); });
-  }
+    API.setCollectionsPath(newPath).then(() => {
+      console.log(`Collections path updated: ${newPath}`);
+    });
+  };
 
   const handleLanguageChange = (e) => {
     const newLang = e.target.value;
@@ -74,6 +79,9 @@ export default function SettingsPage({
     });
     API.settingsGet(SettingsKey.DisableProjects).then((value) => {
       setDisableProjects(value);
+    });
+    API.getEnvironmentStatus(EnvironmentKey.Nextflow).then((status) => {
+      setNextflowStatus(status);
     });
     if (pathRef.current && document.activeElement !== pathRef.current) {
       pathRef.current.value = collectionsPath ?? '';
@@ -123,6 +131,7 @@ export default function SettingsPage({
         />
         <Tab id="settings-visual-panel" label={t('settings.visual-options')} />
         <Tab id="settings-language-panel" label={t('settings.language-select')} />
+        <Tab id="settings-environment-panel" label={t('settings.environment-options')} />
         <Tab id="settings-advanced-panel" label={t('settings.advanced-options')} />
       </Tabs>
 
@@ -178,6 +187,10 @@ export default function SettingsPage({
       </TabPanel>
 
       <TabPanel value={tabValue} index={4}>
+        <EnvironmentPage />
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={5}>
         <Stack spacing={2}>
           <FormControlLabel
             control={

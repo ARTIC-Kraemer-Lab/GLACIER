@@ -159,6 +159,14 @@ app.post('/api/open-web-page', async (req, res) =>
   post_response(res, collection.openWebPage(req.body.url))
 );
 
+app.post('/api/get-environment-status', async (req, res) =>
+  post_response(res, collection.getEnvironmentStatus(req.body.key))
+);
+
+app.post('/api/perform-environment-action', async (req, res) =>
+  post_response(res, collection.performEnvironmentAction(req.body.key, req.body.action))
+);
+
 const PORT = process.env.PORT || 3030;
 app.listen(PORT, () => {
   console.log(`✅ API server listening on http://localhost:${PORT}`);

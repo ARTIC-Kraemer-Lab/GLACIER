@@ -142,4 +142,12 @@ export function registerIpcHandlers() {
   ipcMain.handle('open-web-page', async (event, url: string) => {
     return collection.openWebPage(url);
   });
+
+  ipcMain.handle('get-environment-status', async (event, key) => {
+    return collection.getEnvironmentStatus(key);
+  });
+
+  ipcMain.handle('perform-environment-action', async (event, key, action) => {
+    return collection.performEnvironmentAction(key, action);
+  });
 }

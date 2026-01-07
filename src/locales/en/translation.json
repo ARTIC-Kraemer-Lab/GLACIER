@@ -113,6 +113,11 @@
       "remove": "Remove",
       "unnamed": "Unnamed Project",
       "no-projects": "No projects"
+    },
+    "environment-options": "Environment",
+    "environment": {
+      "nextflow": "Nextflow",
+      "checking-status": "Checking status..."
     }
   }
 }
