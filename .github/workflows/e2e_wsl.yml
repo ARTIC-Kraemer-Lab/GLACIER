@@ -18,9 +18,8 @@ jobs:
 
       - name: Enable WSL
         run: |
-          wsl --install -d Ubuntu --no-launch
-          wsl -l -v
-          wsl --set-default Ubuntu
+          curl -L "https://cloud-images.ubuntu.com/releases/jammy/release/ubuntu-22.04-server-cloudimg-amd64-root.tar.xz" -o ubuntu-22.04.tar.xz
+          wsl --import glacier . ubuntu-22.04.tar.xz
       - name: Install dependencies inside WSL
         run: |
           wsl bash -lc "sudo apt-get update"
