@@ -12,6 +12,8 @@ import {
 } from '../runners/nextflow/nextflow.js';
 import { runRepo_Docker } from '../runners/docker/docker.js';
 
+export { getEnvironmentStatus, performEnvironmentAction } from '../runners/environment.js';
+
 interface IRunWorkflowArgs {
   instance: IWorkflowInstance;
   params: IWorkflowParams;

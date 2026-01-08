@@ -235,11 +235,12 @@ export default function MainPage({ darkMode, setDarkMode }) {
                 repoUrl={repoUrl}
                 setRepoUrl={setRepoUrl}
                 targetDir={targetDir}
+                drawerOpen={drawerOpen}
                 setTargetDir={setTargetDir}
                 setFolderPath={setFolderPath}
-                drawerOpen={drawerOpen}
                 allowArbitraryRepoCloning={allowArbitraryRepoCloning}
                 logMessage={logMessage}
+                setView={setView}
               />
             ) : view === 'library' ? (
               <LibraryPage
@@ -251,6 +252,7 @@ export default function MainPage({ darkMode, setDarkMode }) {
                 drawerOpen={drawerOpen}
                 addToInstancesList={addToInstancesList}
                 logMessage={logMessage}
+                setView={setView}
               />
             ) : view === 'instances' ? (
               <InstancesPage

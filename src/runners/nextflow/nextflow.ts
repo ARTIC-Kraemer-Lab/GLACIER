@@ -114,7 +114,7 @@ export async function runWorkflow(
     const bashCmd = bashArgs.join(' ');
 
     console.log(`Spawning nextflow with command: ${cmd} from ${instancePath}`);
-    const p = spawn('wsl.exe', ['-e', 'bash', '-lc', bashCmd], {
+    const p = spawn('wsl.exe', ['-d', 'glacier', '-e', 'bash', '-lc', bashCmd], {
       cwd: instancePath,
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
@@ -143,7 +143,11 @@ export async function runWorkflow(
   }
 
   console.log(`Spawning nextflow with command: nextflow ${cmd.join(' ')} from ${instancePath}`);
-  const p = spawn('nextflow', cmd, {
+  let nextflow_binary = path.resolve(projectPath, 'bin', 'nextflow');
+  if (!fs_sync.existsSync(nextflow_binary)) {
+    nextflow_binary = 'nextflow'; // assume in PATH
+  }
+  const p = spawn(nextflow_binary, cmd, {
     cwd: instancePath,
     stdio: ['ignore', stdout, stderr], // stdin ignored
     detached: true

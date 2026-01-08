@@ -8,13 +8,15 @@ import { IRepo, IRepoVersions } from './types.js';
 import { generateUniqueName } from './repo.js';
 import { cloneRepo, ICloneRepo, getRepoTags, getRepoBranches } from './repo.js';
 import { runWorkflow } from './runner.js';
+import { getEnvironmentStatus, performEnvironmentAction } from '../runners/environment.js';
 import { WorkflowStatus } from '../types/types.js';
+import { EnvironmentKey } from '../types/environment.js';
 import { syncRepo, getWorkflowParams, getWorkflowSchema } from './repo.js';
 import { getCollectionsPath, getDefaultCollectionsDir, locateReports } from './paths.js';
 import { settings, StoreSchema } from './settings.js';
 
 // Should remove imports from specific runners
-import { getAvailableProfiles as getAvailableProfiles_Nextflow } from '../runners/nextflow/nextflow.js';
+import { getAvailableProfiles } from '../runners/nextflow/nextflow.js';
 import { parseNextflowLog } from '../runners/nextflow/nf-parse.js';
 //
 
@@ -714,7 +716,7 @@ export class Collection {
     if (!local_instance) {
       throw new Error(`Instance ${instance.id} not found in collection.`);
     }
-    return await getAvailableProfiles_Nextflow(local_instance);
+    return await getAvailableProfiles(local_instance);
   }
 
   async cloneRepo(url: string, ver: string): Promise<IWorkflowVersion> {
@@ -964,5 +966,13 @@ export class Collection {
 
   openWebPage(url: string) {
     shell.openExternal(url);
+  }
+
+  async getEnvironmentStatus(key: string) {
+    return getEnvironmentStatus(key);
+  }
+
+  async performEnvironmentAction(key: string, action: string) {
+    return performEnvironmentAction(key, action);
   }
 }

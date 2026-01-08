@@ -45,7 +45,10 @@ const electronAPI = isElectron
       getWorkflowReadme: (instance) => window.electronAPI.getWorkflowReadme(instance),
       settingsGet: (key) => window.electronAPI.settingsGet(key),
       settingsSet: (key, value) => window.electronAPI.settingsSet(key, value),
-      openWebPage: (url) => window.electronAPI.openWebPage(url)
+      openWebPage: (url) => window.electronAPI.openWebPage(url),
+      getEnvironmentStatus: (key) => window.electronAPI.getEnvironmentStatus(key),
+      performEnvironmentAction: (key, action) =>
+        window.electronAPI.performEnvironmentAction(key, action)
     }
   : null;
 
@@ -118,7 +121,10 @@ const httpAPI = {
     httpDispatch('/api/get-workflow-readme', 'POST', { instance }),
   settingsGet: async (key) => httpDispatch('/api/settings-get', 'POST', { key }),
   settingsSet: async (key, value) => httpDispatch('/api/settings-set', 'POST', { key, value }),
-  openWebPage: async (url) => httpDispatch('/api/open-web-page', 'POST', { url })
+  openWebPage: async (url) => httpDispatch('/api/open-web-page', 'POST', { url }),
+  getEnvironmentStatus: async (key) => httpDispatch('/api/get-environment-status', 'POST', { key }),
+  performEnvironmentAction: async (key, action) =>
+    httpDispatch('/api/perform-environment-action', 'POST', { key, action })
 };
 
 export const API = isElectron ? electronAPI : httpAPI;

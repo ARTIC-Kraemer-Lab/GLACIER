@@ -25,7 +25,8 @@ export default function HubPage({
   setTargetDir,
   setFolderPath,
   allowArbitraryRepoCloning,
-  logMessage
+  logMessage,
+  setView
 }) {
   const { t } = useTranslation();
 
@@ -81,6 +82,7 @@ export default function HubPage({
         setTargetDir(result.path);
         setFolderPath(result.path);
         logMessage(`Cloned ${result.name} to ${result.path}`, 'success');
+        setView('library');
       } else {
         logMessage(t('hub.clone-return-none'), 'error');
       }
@@ -137,52 +139,58 @@ export default function HubPage({
           </Paper>
         )}
 
-        <Grid container spacing={2}>
-          {repos.map((repo) => (
-            <Grid item xs={12} sm={6} md={4} key={repo.url}>
-              <Paper variant="outlined" sx={{ p: 2 }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  {repo.name}
-                </Typography>
-                <Stack direction="row" spacing={1}>
-                  <Select
-                    id={`hub-version-select-${repo.name}`}
-                    value={repo.version}
-                    defaultValue={repo.versions[0]}
-                    onChange={(e) => onChangeRepoVersion(repo, e.target.value)}
-                    size="small"
-                  >
-                    {repo.versions.map((version) => (
-                      <MenuItem key={version} value={version}>
-                        {version}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  <Button
-                    id={`hub-install-${repo.name}`}
-                    size="small"
-                    variant="contained"
-                    onClick={() => cloneRepo(repo.url, repo.version)}
-                    disabled={isRepoInstalled(repo.url, repo.version) || repo.installing}
-                  >
-                    {t('hub.install')}
-                    {repo.installing && (
-                      <CircularProgress
-                        size={40}
-                        sx={{
-                          position: 'absolute',
-                          top: '0%',
-                          left: '25%',
-                          zIndex: 1
-                        }}
-                      />
-                    )}
-                  </Button>
-                </Stack>
-              </Paper>
-            </Grid>
-          ))}
-        </Grid>
+        {repos.length === 0 ? (
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            No installable workflows.
+          </Typography>
+        ) : (
+          <Grid container spacing={2}>
+            {repos.map((repo) => (
+              <Grid item xs={12} sm={6} md={4} key={repo.url}>
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    {repo.name}
+                  </Typography>
+                  <Stack direction="row" spacing={1}>
+                    <Select
+                      id={`hub-version-select-${repo.name}`}
+                      value={repo.version}
+                      defaultValue={repo.versions[0]}
+                      onChange={(e) => onChangeRepoVersion(repo, e.target.value)}
+                      size="small"
+                    >
+                      {repo.versions.map((version) => (
+                        <MenuItem key={version} value={version}>
+                          {version}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    <Button
+                      id={`hub-install-${repo.name}`}
+                      size="small"
+                      variant="contained"
+                      onClick={() => cloneRepo(repo.url, repo.version)}
+                      disabled={isRepoInstalled(repo.url, repo.version) || repo.installing}
+                    >
+                      {t('hub.install')}
+                      {repo.installing && (
+                        <CircularProgress
+                          size={40}
+                          sx={{
+                            position: 'absolute',
+                            top: '0%',
+                            left: '25%',
+                            zIndex: 1
+                          }}
+                        />
+                      )}
+                    </Button>
+                  </Stack>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+        )}
       </Stack>
     </Container>
   );

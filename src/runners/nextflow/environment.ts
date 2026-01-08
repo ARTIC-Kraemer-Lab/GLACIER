@@ -1,0 +1,281 @@
+import https from 'https';
+import { mkdirSync, chmodSync, createWriteStream } from 'fs';
+import { execFileSync, spawn } from 'child_process';
+import path from 'path';
+
+const is_windows = process.platform === 'win32';
+const nextflowPath = path.join(process.env.HOME || '', 'GLACIER', 'bin', 'nextflow');
+const distroPath = path.join(process.env.HOME || '', 'GLACIER', 'wsl', 'ubuntu-22.04.tar.xz');
+
+export async function nextflowStatus() {
+  if (is_windows) {
+    return nextflowStatus_win();
+  } else {
+    return nextflowStatus_unix();
+  }
+}
+
+export async function nextflowAction(action: string) {
+  switch (action) {
+    case 'install.nextflow':
+      return installNextflow();
+    case 'install.wsl2':
+      return installWSL2();
+    case 'install.wsl2.distro':
+      return installWSL2distro();
+    default:
+      throw new Error(`Unknown Nextflow action: ${action}`);
+  }
+}
+
+function nextflowStatus_win() {
+  // Windows Nextflow installation process
+  if (!wslCheck()) {
+    return [
+      {
+        title: 'Windows Subsystem for Linux (v2)',
+        description:
+          'Windows Subsystem for Linux (WSL) version 2 must be installed for nextflow. This requires administrative rights. After install, restart GLACIER.',
+        status: 'info',
+        actions: [
+          {
+            action: 'install.wsl2',
+            label: 'Install WSL2'
+          }
+        ]
+      }
+    ];
+  }
+  // WSL is installed, check for glacier distribution
+  if (!wslCheckDistro()) {
+    return [
+      {
+        title: 'Prepare WSL',
+        description:
+          'Window Subsystem for Linux is installed but has not been configured. Configuring will install and configure an appropriate distribution.',
+        status: 'info',
+        actions: [
+          {
+            action: 'install.wsl2.distro',
+            label: 'Configure WSL2'
+          }
+        ]
+      }
+    ];
+  }
+  return [
+    {
+      title: 'Nextflow',
+      description: 'A GLACIER managed version of Nextflow is installed and accessible.',
+      status: 'info',
+      actions: []
+    }
+  ];
+}
+
+function wslCheck() {
+  return checkExecutable('wsl', ['--version']);
+}
+
+function wslCheckDistro() {
+  // Check if glacier distribution can launch nextflow
+  if (!callExecutable('wsl', ['-d', 'glacier', '--', 'nextflow', '-version'])) {
+    return false;
+  }
+  return true;
+}
+
+function nextflowStatus_unix() {
+  // Non-Windows Nextflow installation process (MacOS, Linux)
+  if (isNextflowInstalled(nextflowPath)) {
+    // GLACIER Nextflow installation
+    return [
+      {
+        title: 'Nextflow',
+        description: 'A GLACIER managed version of Nextflow is installed and accessible.',
+        status: 'info',
+        actions: []
+      }
+    ];
+  } else if (isNextflowInstalled()) {
+    // System Nextflow installation
+    return [
+      {
+        title: 'Nextflow',
+        description:
+          'A system install is available and accessible. You can install a GLACIER managed version if you prefer.',
+        status: 'info',
+        actions: [
+          {
+            action: 'install.nextflow',
+            label: 'Install Nextflow'
+          }
+        ]
+      }
+    ];
+  } else {
+    // No Nextflow installation found
+    return [
+      {
+        title: 'Nextflow',
+        description: 'A working Nextflow installation cannot be found. Please install Nextflow.',
+        status: 'warning',
+        actions: [
+          {
+            action: 'install.nextflow',
+            label: 'Install Nextflow'
+          }
+        ]
+      }
+    ];
+  }
+}
+
+function isNextflowInstalled(nextflowPath: string = 'nextflow'): boolean {
+  return checkExecutable(nextflowPath, ['-version']);
+}
+
+function checkExecutable(filePath: string, args: string[] = []) {
+  try {
+    execFileSync(filePath, args, { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function callExecutable(filePath: string, args: string[] = []) {
+  try {
+    return execFileSync(filePath, args, { encoding: 'utf8' });
+  } catch {
+    return '';
+  }
+}
+
+function installNextflow() {
+  return new Promise((resolve, reject) => {
+    mkdirSync(path.dirname(nextflowPath), { recursive: true });
+    https
+      .get('https://get.nextflow.io', (res) => {
+        if (res.statusCode !== 200) return reject({ ok: false });
+        const file = createWriteStream(nextflowPath);
+        res.pipe(file);
+        file.on('finish', () => {
+          chmodSync(nextflowPath, 0o755);
+          const p = spawn(nextflowPath, ['-version'], { stdio: 'ignore' });
+          p.on('close', (code) => {
+            code === 0 ? resolve({ ok: true }) : reject({ ok: false });
+          });
+        });
+      })
+      .on('error', () => reject({ ok: false }));
+  });
+}
+
+function installWSL2() {
+  return checkExecutable('wsl', []); // trigger installation
+}
+
+function installWSL2distro() {
+  // Ensure old / broken distribution is removed
+  callExecutable('wsl', ['--unregister', 'glacier']);
+  // Download base distribution tarball
+  return new Promise((resolve, reject) => {
+    mkdirSync(path.dirname(distroPath), { recursive: true });
+    https
+      .get(
+        'https://cloud-images.ubuntu.com/releases/jammy/release/ubuntu-22.04-server-cloudimg-amd64-root.tar.xz',
+        (res) => {
+          if (res.statusCode !== 200) return reject({ ok: false });
+          const file = createWriteStream(distroPath);
+          res.pipe(file);
+          file.on('finish', () => {
+            // Import distribution into WSL
+            callExecutable('wsl', ['--import', 'glacier', path.dirname(distroPath), distroPath]);
+            // Configure user account
+            callExecutable('wsl', [
+              '-d',
+              'glacier',
+              '-u',
+              'root',
+              '--',
+              'useradd',
+              '-m',
+              '-s',
+              '/bin/bash',
+              'user'
+            ]);
+            callExecutable('wsl', [
+              '-d',
+              'glacier',
+              '-u',
+              'root',
+              '--',
+              'bash',
+              '-c',
+              'echo "user:user" | chpasswd'
+            ]);
+            callExecutable('wsl', [
+              '-d',
+              'glacier',
+              '-u',
+              'root',
+              '--',
+              'bash',
+              '-c',
+              'echo -e "[user]\ndefault=user" > /etc/wsl.conf'
+            ]);
+            callExecutable('wsl', [
+              '-d',
+              'glacier',
+              '-u',
+              'root',
+              '--',
+              'bash',
+              '-c',
+              "sed -i 's/127.0.1.1.*/127.0.1.1 glacier/' /etc/hosts"
+            ]);
+            callExecutable('wsl', ['-t', 'glacier']);
+            // Install JAVA
+            callExecutable('wsl', ['-d', 'glacier', '-u', 'root', '--', 'apt', 'update', '-y']);
+            callExecutable('wsl', [
+              '-d',
+              'glacier',
+              '-u',
+              'root',
+              '--',
+              'apt',
+              'install',
+              '-y',
+              'openjdk-17-jre-headless'
+            ]);
+            callExecutable('wsl', ['-d', 'glacier', '-u', 'root', '--', 'java', '-version']);
+            // Install nextflow
+            callExecutable('wsl', [
+              '-d',
+              'glacier',
+              '-u',
+              'user',
+              '--',
+              'bash',
+              '-c',
+              'curl -s https://get.nextflow.io -o ~/nextflow && chmod +x ~/nextflow'
+            ]);
+            callExecutable('wsl', [
+              '-d',
+              'glacier',
+              '-u',
+              'root',
+              '--',
+              'mv',
+              '/home/user/nextflow',
+              '/usr/local/bin/'
+            ]);
+            callExecutable('wsl', ['-d', 'glacier', '--', 'nextflow', '-version']); // init
+            resolve({ ok: true });
+          });
+        }
+      )
+      .on('error', () => reject({ ok: false }));
+  });
+}

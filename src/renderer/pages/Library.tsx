@@ -11,7 +11,8 @@ import {
   Select,
   Snackbar,
   MenuItem,
-  Alert
+  Alert,
+  Link
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { API } from '../services/api.js';
@@ -24,7 +25,8 @@ export default function LibraryPage({
   setTargetDir,
   setFolderPath,
   addToInstancesList,
-  logMessage
+  logMessage,
+  setView
 }) {
   const { t } = useTranslation();
 
@@ -66,6 +68,20 @@ export default function LibraryPage({
       logMessage(t('library.repo-sync-failed'), 'error');
     }
   };
+
+  if (repos.length === 0) {
+    return (
+      <Container>
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          No workflows in library. You can install workflows through the{' '}
+          <Link component="button" underline="hover" onClick={() => setView('hub')}>
+            Hub
+          </Link>
+          .
+        </Typography>
+      </Container>
+    );
+  }
 
   return (
     <Container sx={{ pb: 12 }}>
