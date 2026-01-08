@@ -49,8 +49,10 @@ export default function SettingsPage({
     const newPath = pathRef.current?.value ?? '';
     if (newPath === collectionsPath) return;
     setCollectionsPath(newPath);
-    API.setCollectionsPath(newPath).then(() => { console.log(`Collections path updated: ${newPath}`); });
-  }
+    API.setCollectionsPath(newPath).then(() => {
+      console.log(`Collections path updated: ${newPath}`);
+    });
+  };
 
   const handleLanguageChange = (e) => {
     const newLang = e.target.value;
