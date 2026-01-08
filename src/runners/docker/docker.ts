@@ -41,7 +41,13 @@ export async function clearStoppedContainers() {
   for (const info of stopped) {
     const container = docker.getContainer(info.Id);
     await container.remove();
-    results.push(info.Id);
+    if (Array.isArray(info.Id)) {
+      // Flatten if multiple IDs
+      results.push(...info.Id);
+    } else {
+      // Single ID
+      results.push(info.Id);
+    }
   }
   return results;
 }
