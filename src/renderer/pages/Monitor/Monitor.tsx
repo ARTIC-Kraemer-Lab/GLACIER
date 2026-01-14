@@ -101,8 +101,8 @@ export default function MonitorPage({ instance, logMessage }) {
       <HeaderMenu instance={instance} logMessage={logMessage} />
       <Tabs value={tabSelected} onChange={handleTabChange}>
         <Tab label={t('monitor.progress.title')} />
-        <Tab label={t('monitor.logs.title')} />
         <Tab label={t('monitor.reports')} />
+        <Tab label={t('monitor.logs.title')} />
       </Tabs>
       <TabPanel value={tabSelected} index={0}>
         <ProgressTracker
@@ -112,6 +112,9 @@ export default function MonitorPage({ instance, logMessage }) {
         />
       </TabPanel>
       <TabPanel value={tabSelected} index={1}>
+        <HtmlReports instance={instance} />
+      </TabPanel>
+      <TabPanel value={tabSelected} index={2}>
         <LogsPage
           instance={instance}
           stdOut={stdOut}
@@ -119,9 +122,6 @@ export default function MonitorPage({ instance, logMessage }) {
           nextflowLog={nextflowLog}
           logMessage={logMessage}
         />
-      </TabPanel>
-      <TabPanel value={tabSelected} index={2}>
-        <HtmlReports instance={instance} />
       </TabPanel>
     </Paper>
   );
