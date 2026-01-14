@@ -1,6 +1,6 @@
 # GLACIER
 
-[![GLACIER](https://github.com/jsbrittain/GLACIER/actions/workflows/GLACIER.yml/badge.svg)](https://github.com/jsbrittain/GLACIER/actions/workflows/GLACIER.yml)
+[![GLACIER](https://github.com/ARTIC-Kraemer-Lab/GLACIER/actions/workflows/GLACIER.yml/badge.svg)](https://github.com/ARTIC-Kraemer-Lab/GLACIER/actions/workflows/GLACIER.yml)
 
 **G**raphical<br>
 **L**aunchpad for<br>
