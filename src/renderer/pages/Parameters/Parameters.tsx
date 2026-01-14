@@ -71,7 +71,13 @@ export default function ParametersPage({ instance, refreshInstancesList, logMess
     const call_params = { ...params };
     const profile = params['profile'] || default_profile;
     delete call_params['profile'];
+    // Return PID on success
     const id = await API.runWorkflow(instance, call_params, { profile: profile });
+    // Return dictionray with error on failure
+    if (typeof id === 'object') {
+      logMessage(`Error launching workflow: ${id?.error || 'Unknown error'}`, 'error');
+      return;
+    }
     logMessage(`Launched workflow ${instance.name}`);
     refreshInstancesList();
   };

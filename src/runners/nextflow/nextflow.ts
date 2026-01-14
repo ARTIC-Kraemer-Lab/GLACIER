@@ -4,6 +4,7 @@ import slash from 'slash';
 import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import { IWorkflowInstance } from '../../main/collection.js'; // should not be linking directly to main from here
+import { getCollectionsPath } from '../../main/paths.js'; //
 
 type paramsT = { [key: string]: any };
 
@@ -56,6 +57,7 @@ export async function runWorkflow(
   const workPath = resolvePath(instancePath, 'work');
   await fs.mkdir(workPath, { recursive: true });
   const projectPath = instance.workflow_version?.path || instancePath;
+  const collectionsPath = getCollectionsPath();
 
   if (is_windows) {
     // Convert all file and folder paths in params to posix and redirect
@@ -143,18 +145,35 @@ export async function runWorkflow(
   }
 
   console.log(`Spawning nextflow with command: nextflow ${cmd.join(' ')} from ${instancePath}`);
-  let nextflow_binary = path.resolve(projectPath, 'bin', 'nextflow');
+  let nextflow_binary = path.resolve(collectionsPath, 'bin', 'nextflow');
   if (!fs_sync.existsSync(nextflow_binary)) {
     nextflow_binary = 'nextflow'; // assume in PATH
   }
-  const p = spawn(nextflow_binary, cmd, {
-    cwd: instancePath,
-    stdio: ['ignore', stdout, stderr], // stdin ignored
-    detached: true
-  });
-  p.unref(); // allow the parent to exit independently
+  try {
+    const p = spawn(nextflow_binary, cmd, {
+      cwd: instancePath,
+      stdio: ['ignore', stdout, stderr], // stdin ignored
+      detached: true
+    });
 
-  return p.pid;
+    // Catch asynchronous child process failures (includes nextflow not found)
+    new Promise((resolve) => {
+      p.on('error', (err) => {
+        if (err) {
+          return null;
+        }
+      });
+    });
+
+    if (!p?.pid) {
+      throw new Error('Failed to spawn nextflow process');
+    }
+    p.unref(); // allow the parent to exit independently
+    return p.pid;
+  } catch (err) {
+    console.error('Error spawning nextflow process:', err);
+    return null;
+  }
 }
 
 export async function getAvailableProfiles(instance: IWorkflowInstance): Promise<string[]> {
