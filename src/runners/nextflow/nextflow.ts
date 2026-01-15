@@ -3,8 +3,10 @@ import * as fs_sync from 'fs';
 import slash from 'slash';
 import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
-import { IWorkflowInstance } from '../../main/collection.js'; // should not be linking directly to main from here
-import { getCollectionsPath } from '../../main/paths.js'; //
+
+// should not be linking directly to main from here
+import { IWorkflowInstance } from '../../main/collection.js';
+import { getCollectionsPath } from '../../main/paths.js';
 
 type paramsT = { [key: string]: any };
 
@@ -122,6 +124,17 @@ export async function runWorkflow(
       windowsHide: true,
       detached: true
     });
+
+    // Catch asynchronous child process failures (includes nextflow not found)
+    p.on('error', (err) => {
+      if (err) {
+        return null;
+      }
+    });
+
+    if (!p?.pid) {
+      throw new Error('Failed to spawn nextflow process');
+    }
     p.unref();
 
     return p.pid;
@@ -157,12 +170,10 @@ export async function runWorkflow(
     });
 
     // Catch asynchronous child process failures (includes nextflow not found)
-    new Promise((resolve) => {
-      p.on('error', (err) => {
-        if (err) {
-          return null;
-        }
-      });
+    p.on('error', (err) => {
+      if (err) {
+        return null;
+      }
     });
 
     if (!p?.pid) {
@@ -171,7 +182,6 @@ export async function runWorkflow(
     p.unref(); // allow the parent to exit independently
     return p.pid;
   } catch (err) {
-    console.error('Error spawning nextflow process:', err);
     return null;
   }
 }

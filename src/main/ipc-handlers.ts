@@ -5,8 +5,21 @@ import http from 'isomorphic-git/http/node/index.cjs';
 import { ipcMain } from 'electron';
 import { Collection } from './collection.js';
 import { StoreSchema } from './settings.js';
+import { Result } from '../types/types.js';
 
 const collection = Collection.getInstance();
+
+async function call(fcn: any, ...args: any[]): Promise<Result<any>> {
+  try {
+    const data = await fcn(...args);
+    return { ok: true, data };
+  } catch (err: any) {
+    return {
+      ok: false,
+      error: { message: err?.message ?? 'Unknown error' }
+    };
+  }
+}
 
 export function registerIpcHandlers() {
   ipcMain.handle(
@@ -84,8 +97,8 @@ export function registerIpcHandlers() {
     return collection.getCollections();
   });
 
-  ipcMain.handle('run-workflow', async (event, instance, params, opts) => {
-    return collection.runWorkflow(instance, params, opts);
+  ipcMain.handle('run-workflow', async (event, ...args) => {
+    return call(collection.runWorkflow.bind(collection), ...args);
   });
 
   ipcMain.handle('sync-repo', async (event, path: string) => {
