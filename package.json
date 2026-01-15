@@ -7,7 +7,8 @@
     "dev": "vite",
     "build:backend": "tsc",
     "build:frontend": "vite build",
-    "build": "npm run build:backend && npm run build:frontend",
+    "build:bundle": "scripts/prepare_bundle.sh",
+    "build": "npm run build:backend && npm run build:frontend && npm run build:bundle",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -16,9 +17,9 @@
     "dist": "npm run build && electron-builder",
     "server": "npm run build && cd api-server && npm install && npm run dev"
   },
-  "author": "",
+  "author": "ARTIC Kraemer Lab",
   "license": "ISC",
-  "description": "",
+  "description": "Graphical Launchpad for Analysis Computation Inference and Explication of Results",
   "build": {
     "appId": "com.ARTIC-Kraemer-Lab.GLACIER",
     "productName": "GLACIER",
@@ -26,6 +27,16 @@
       "buildResources": "assets",
       "output": "dist"
     },
+    "extraResources": [
+      {
+        "from": "bundle",
+        "to": "bundle"
+      }
+    ],
+    "asarUnpack": [
+      "bundle/**"
+    ],
+    "afterPack": "scripts/after-pack.cjs",
     "files": [
       "dist/**/*",
       "package.json"

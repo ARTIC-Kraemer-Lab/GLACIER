@@ -1,12 +1,40 @@
 import * as path from 'path';
 import * as fs_sync from 'fs';
 import slash from 'slash';
+import { app } from 'electron';
 import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 
 // should not be linking directly to main from here
 import { IWorkflowInstance } from '../../main/collection.js';
 import { getCollectionsPath } from '../../main/paths.js';
+
+// Resource paths
+const resource_root = path.join(
+  app.isPackaged ? process.resourcesPath : app.getAppPath(),
+  'bundle'
+);
+const java_binary = path.join(
+  resource_root,
+  'jre',
+  'bin',
+  process.platform === 'win32' ? 'java.exe' : 'java'
+);
+const jar_file = path.join(resource_root, 'nextflow.jar');
+
+// Nextflow runtime environment
+const userNextflowDir = path.join(app.getPath('userData'), 'nextflow');
+try {
+  fs_sync.mkdirSync(userNextflowDir, { recursive: true });
+} catch (e) {
+  /* ignore */
+}
+
+const env = {
+  ...process.env,
+  NXF_HOME: userNextflowDir,
+  NXF_JAVA_HOME: path.join(resource_root, 'jre')
+};
 
 type paramsT = { [key: string]: any };
 
@@ -157,14 +185,24 @@ export async function runWorkflow(
     cmd.push('-resume');
   }
 
+  const java_flags = [
+    '-Dfile.encoding=UTF-8',
+    '-Dcapsule.trampoline',
+    '-Dcom.sun.security.enableAIAcaIssuers=true',
+    '-Djava.awt.headless=true',
+    '-XX:+TieredCompilation',
+    '-XX:TieredStopAtLevel=1',
+    '--add-opens=java.base/java.lang=ALL-UNNAMED',
+    '--add-opens=java.base/java.io=ALL-UNNAMED',
+    '--enable-native-access=ALL-UNNAMED',
+    '--sun-misc-unsafe-memory-access=allow'
+  ];
+
   console.log(`Spawning nextflow with command: nextflow ${cmd.join(' ')} from ${instancePath}`);
-  let nextflow_binary = path.resolve(collectionsPath, 'bin', 'nextflow');
-  if (!fs_sync.existsSync(nextflow_binary)) {
-    nextflow_binary = 'nextflow'; // assume in PATH
-  }
   try {
-    const p = spawn(nextflow_binary, cmd, {
+    const p = spawn(java_binary, [...java_flags, '-jar', jar_file, ...cmd], {
       cwd: instancePath,
+      env,
       stdio: ['ignore', stdout, stderr], // stdin ignored
       detached: true
     });
