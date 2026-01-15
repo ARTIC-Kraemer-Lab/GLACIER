@@ -787,7 +787,7 @@ export class Collection {
       opts: opts
     });
     if (!pid) {
-      throw new Error('Failed to start workflow.');
+      throw new Error(`Failed to start workflow instance ${instance.id}.`);
     }
     local_instance.attachPID(pid as number);
     this.recordRunWorkflow(instance);

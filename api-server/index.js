@@ -25,12 +25,27 @@ const post_response = (res, maybe_promise) => {
     });
 };
 
+async function call(fcn, ...args) {
+  try {
+    const data = await fcn(...args);
+    return { ok: true, data };
+  } catch (err) {
+    return {
+      ok: false,
+      error: { message: err?.message ?? 'Unknown error' }
+    };
+  }
+}
+
 app.post('/api/create-workflow-instance', async (req, res) =>
   post_response(res, collection.createWorkflowInstance(req.body.workflow_id))
 );
 
 app.post('/api/run-workflow', async (req, res) =>
-  post_response(res, collection.runWorkflow(req.body.instance, req.body.params, req.body.opts))
+  post_response(
+    res,
+    call(collection.runWorkflow.bind(collection), req.body.instance, req.body.params, req.body.opts)
+  )
 );
 
 app.post('/api/list-workflow-instances', async (req, res) =>
