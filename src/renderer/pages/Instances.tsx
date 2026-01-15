@@ -85,8 +85,9 @@ const InstanceList = ({ rows, setItem, instancesList, refreshInstancesList }) =>
     }
     const instance = instancesList.find((item) => item.name === name).instance;
     console.log('Instance to delete: ', instance.id);
-    await API.deleteWorkflowInstance(instance);
-    refreshInstancesList();
+    API.deleteWorkflowInstance(instance).then(() => {
+      refreshInstancesList();
+    });
   };
 
   return (
@@ -143,19 +144,10 @@ export default function InstancesPage({
   const [rows, setRows] = useState([]);
 
   const onLaunch = async (instance, params) => {
-    const id = await API.runWorkflow(instance, params, {});
-    logMessage(`Launched workflow ${instance.name}`);
+    API.runWorkflow(instance, params, {}).then(() => {
+      logMessage(`Launched workflow ${instance.name}`);
+    });
   };
-
-  if (instancesList.length === 0) {
-    return (
-      <Container>
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          No workflows queued.
-        </Typography>
-      </Container>
-    );
-  }
 
   useEffect(() => {
     setRows(
@@ -202,6 +194,13 @@ export default function InstancesPage({
               <MonitorPage instance={instance} logMessage={logMessage} />
             );
           })
+      )}
+      {instancesList.length === 0 && (
+        <Container>
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            {t('instances.no-instances')}
+          </Typography>
+        </Container>
       )}
     </Container>
   );

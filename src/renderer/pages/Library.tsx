@@ -69,20 +69,6 @@ export default function LibraryPage({
     }
   };
 
-  if (repos.length === 0) {
-    return (
-      <Container>
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          No workflows in library. You can install workflows through the{' '}
-          <Link component="button" underline="hover" onClick={() => setView('hub')}>
-            Hub
-          </Link>
-          .
-        </Typography>
-      </Container>
-    );
-  }
-
   return (
     <Container sx={{ pb: 12 }}>
       {' '}
@@ -122,6 +108,13 @@ export default function LibraryPage({
           ))}
         </Grid>
       </Stack>
+      {repos.length === 0 && (
+        <Container>
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            {t('library.no-repos-installed')}
+          </Typography>
+        </Container>
+      )}
     </Container>
   );
 }
