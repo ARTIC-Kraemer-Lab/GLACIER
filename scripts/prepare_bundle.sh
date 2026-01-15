@@ -13,6 +13,12 @@ pushd ..
 mkdir -p "bundle"
 pushd "bundle"
 
+# No bundle required on Windows
+if [[ "$RUNNER_OS" == "Windows" ]]; then
+    echo "Windows OS detected. No bundle preparation required."
+    exit 0
+fi
+
 # Download Nextflow
 if [ ! -f "nextflow.jar" ]; then
     echo "Downloading Nextflow..."
