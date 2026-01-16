@@ -32,6 +32,17 @@ jobs:
         run: npm ci
 
       - name: Package & publish with electron-builder
-        run: npm run dist
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_ID: ${{ secrets.MACOS_NOTARIZATION_APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.MACOS_NOTARIZATION_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.NOTARIZATION_PWD }}
+          CSC_LINK: "certificate.p12"
+          CSC_BASE64: ${{ secrets.MACOS_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            echo $CSC_BASE64 | base64 --decode > ${CSC_LINK}
+          fi
+          npm run dist

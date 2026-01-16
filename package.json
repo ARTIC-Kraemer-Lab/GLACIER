@@ -32,7 +32,9 @@
     ],
     "mac": {
       "target": "dmg",
-      "identity": null
+      "hardenedRuntime": true,
+      "entitlements": "assets/entitlements.mac.plist",
+      "entitlementsInherit": "assets/entitlements.mac.plist"
     },
     "win": {
       "target": "nsis"
