@@ -48,11 +48,54 @@ const paramsToPosix = (params: any): any => {
   return params;
 };
 
+// Electron check
+const get_electron_paths = async () => {
+  const is_electron = process.versions?.electron !== undefined;
+
+  let java_binary = '';
+  let jar_file = '';
+  let env = {};
+
+  if (is_electron) {
+    const { app } = await import('electron');
+
+    // Resource paths
+    const resource_root = path.join(
+      app.isPackaged ? process.resourcesPath : app.getAppPath(),
+      'bundle'
+    );
+    java_binary = path.join(
+      resource_root,
+      'jre',
+      'bin',
+      process.platform === 'win32' ? 'java.exe' : 'java'
+    );
+    jar_file = path.join(resource_root, 'nextflow.jar');
+
+    // Nextflow runtime environment
+    const userNextflowDir = path.join(app.getPath('userData'), 'nextflow');
+    try {
+      fs_sync.mkdirSync(userNextflowDir, { recursive: true });
+    } catch (e) {
+      /* ignore */
+    }
+
+    env = {
+      ...process.env,
+      NXF_HOME: userNextflowDir,
+      NXF_JAVA_HOME: path.join(resource_root, 'jre')
+    };
+  }
+  return { is_electron, java_binary, jar_file, env };
+};
+
 export async function runWorkflow(
   instance: IWorkflowInstance,
   params: paramsT,
   { resume = false, restart = false, profile = 'standard' }: IRunWorkflowOpts = {}
 ) {
+  const { is_electron, java_binary, jar_file, env } = await get_electron_paths();
+
   // Launch nextflow natively on host system
   const name = instance.name;
   const instancePath = instance.path; // launch from Windows path (on win32)
@@ -157,17 +200,37 @@ export async function runWorkflow(
     cmd.push('-resume');
   }
 
+  const java_flags = [
+    '-Dfile.encoding=UTF-8',
+    '-Dcapsule.trampoline',
+    '-Dcom.sun.security.enableAIAcaIssuers=true',
+    '-Djava.awt.headless=true',
+    '-XX:+TieredCompilation',
+    '-XX:TieredStopAtLevel=1',
+    '--add-opens=java.base/java.lang=ALL-UNNAMED',
+    '--add-opens=java.base/java.io=ALL-UNNAMED',
+    '--enable-native-access=ALL-UNNAMED',
+    '--sun-misc-unsafe-memory-access=allow'
+  ];
+
   console.log(`Spawning nextflow with command: nextflow ${cmd.join(' ')} from ${instancePath}`);
-  let nextflow_binary = path.resolve(collectionsPath, 'bin', 'nextflow');
-  if (!fs_sync.existsSync(nextflow_binary)) {
-    nextflow_binary = 'nextflow'; // assume in PATH
-  }
   try {
-    const p = spawn(nextflow_binary, cmd, {
-      cwd: instancePath,
-      stdio: ['ignore', stdout, stderr], // stdin ignored
-      detached: true
-    });
+    let p;
+    if (is_electron) {
+      p = spawn(java_binary, [...java_flags, '-jar', jar_file, ...cmd], {
+        cwd: instancePath,
+        env,
+        stdio: ['ignore', stdout, stderr], // stdin ignored
+        detached: true
+      });
+    } else {
+      // Client-server (assume nextflow on path for now)
+      p = spawn('nextflow', cmd, {
+        cwd: instancePath,
+        stdio: ['ignore', stdout, stderr], // stdin ignored
+        detached: true
+      });
+    }
 
     // Catch asynchronous child process failures (includes nextflow not found)
     p.on('error', (err) => {

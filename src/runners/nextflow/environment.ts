@@ -87,6 +87,17 @@ function wslCheckDistro() {
 
 function nextflowStatus_unix() {
   // Non-Windows Nextflow installation process (MacOS, Linux)
+
+  // MacOS / Linux install is bundled
+  return [
+    {
+      title: 'Nextflow',
+      description: 'GLACIER provides a managed version of Nextflow. No further action is required.',
+      status: 'info',
+      actions: []
+    }
+  ];
+
   if (isNextflowInstalled(nextflowPath)) {
     // GLACIER Nextflow installation
     return [

@@ -13,8 +13,17 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
+      # Local nextflow install is required for WebServer testing
       - uses: nf-core/setup-nextflow@v1
+
+      # A stripped Tumurin JRE is bundled with GLACIER
+      - name: Install Temurin JAVA
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '25'
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
