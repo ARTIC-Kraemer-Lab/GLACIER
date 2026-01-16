@@ -14,6 +14,7 @@ mkdir -p "bundle"
 pushd "bundle"
 
 # No bundle required on Windows
+RUNNER_OS="${RUNNER_OS:-$(uname)}"
 if [[ "$RUNNER_OS" == "Windows" ]]; then
     echo "Windows OS detected. No bundle preparation required."
     exit 0
