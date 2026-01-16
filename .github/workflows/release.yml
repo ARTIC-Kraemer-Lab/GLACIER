@@ -44,13 +44,40 @@ jobs:
           APPLE_ID: ${{ secrets.MACOS_NOTARIZATION_APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.MACOS_NOTARIZATION_TEAM_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.NOTARIZATION_PWD }}
+          CERTIFICATE_NAME: ${{ secrets.MACOS_CERTIFICATE_NAME }}
           CSC_BASE64: ${{ secrets.MACOS_CERTIFICATE }}
           CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PWD: ${{ secrets.MACOS_CI_KEYCHAIN_PWD }}
         shell: bash
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
+            # Write signing certificate to file (this is all we need for electron-builder)
             echo $CSC_BASE64 | base64 --decode > certificate.p12
             export CSC_LINK="certificate.p12"
+
+            # Cannot sign app unless binaries in jar file are also signed
+            # Decompress, sign and recompress jar file
+            
+            # Create a keychain to hold the certificate (required for signing jar components)
+            security create-keychain -p "$KEYCHAIN_PWD" build.keychain
+            security default-keychain -s build.keychain
+            security unlock-keychain -p "$KEYCHAIN_PWD" build.keychain
+            security import certificate.p12 -k build.keychain -P "$CSC_KEY_PASSWORD" -T /usr/bin/codesign
+            security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PWD" build.keychain
+            
+            # Extract jar file and sign internal binaries
+            npm run build:bundle
+            mkdir nextflow-jar
+            cd nextflow-jar
+            jar xf ../bundle/nextflow.jar
+            rm ../bundle/nextflow.jar
+            
+            # Sign internal components
+            codesign --force --sign "$CERTIFICATE_NAME" --options runtime --timestamp META-INF/native/osx/libjansi.jnilib
+
+            # Repackage jar file and tidy up
+            jar cf ../bundle/nextflow.jar -C . .
+            cd .. && rm -rf nextflow-jar
           else
             export CSC_IDENTITY_AUTO_DISCOVERY=false
             export CSC_LINK=""
