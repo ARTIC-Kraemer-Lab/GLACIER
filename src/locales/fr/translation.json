@@ -118,6 +118,7 @@
     "environment": {
       "nextflow": "Nextflow",
       "checking-status": "Vérification du statut..."
-    }
+    },
+    "licenses": "Licences"
   }
 }

@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import ProjectsList from './ProjectsList.js';
 import EnvironmentPage from './Environment.js';
+import LicensesPage from './Licenses.js';
 import { API } from '../../services/api.js';
 import { SettingsKey } from '../../../types/settings.js';
 import { EnvironmentKey } from '../../../types/environment.js';
@@ -133,6 +134,7 @@ export default function SettingsPage({
         <Tab id="settings-language-panel" label={t('settings.language-select')} />
         <Tab id="settings-environment-panel" label={t('settings.environment-options')} />
         <Tab id="settings-advanced-panel" label={t('settings.advanced-options')} />
+        <Tab id="settings-licenses-panel" label={t('settings.licenses')} />
       </Tabs>
 
       <TabPanel value={tabValue} index={0}>
@@ -211,6 +213,10 @@ export default function SettingsPage({
             label={t('settings.disable-schema-validation')}
           />
         </Stack>
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={6}>
+        <LicensesPage />
       </TabPanel>
     </Paper>
   );

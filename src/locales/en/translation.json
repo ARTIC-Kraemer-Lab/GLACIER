@@ -118,6 +118,7 @@
     "environment": {
       "nextflow": "Nextflow",
       "checking-status": "Checking status..."
-    }
+    },
+    "licenses": "Licenses"
   }
 }
