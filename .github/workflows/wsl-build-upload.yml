@@ -61,7 +61,7 @@ jobs:
         shell: powershell
         run: |
           wsl.exe --list --verbose
-          wsl.exe --export Ubuntu-22.04 glacier.tar
+          wsl.exe --export Ubuntu glacier.tar
 
   upload:
     runs-on: ubuntu-latest
