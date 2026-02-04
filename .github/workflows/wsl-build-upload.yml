@@ -78,11 +78,14 @@ jobs:
         with:
           name: glacier_tar
 
-      - uses: shallwefootball/s3-upload-action@master
-        with:
+      - name: upload to s3
+        shell: bash
+        env:
           aws_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-          aws_bucket: "loman-labz-public-datasets"
-          endpoint: "https://s3.climb.ac.uk"
-          source_dir: "glacier.tar"
-          destination_dir: "glacier-ubuntu_22.04-nextflow_25.10.3.tar"
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_s3_bucket: loman-labz-public-datasets
+        run: |
+          sudo apt-get update && sudo apt-get -y install awscli
+          aws configure set aws_access_key_id $aws_key_id
+          aws configure set aws_secret_access_key $aws_secret_access_key 
+          aws s3 glacier.tar s3://$aws_s3_bucket/glacier-ubuntu_22.04-nextflow_25.10.3.wsl
