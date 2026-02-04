@@ -13,6 +13,8 @@ jobs:
       - uses: Vampire/setup-wsl@v6
         with:
           distribution: Ubuntu-22.04
+          wsl-version: 2
+
       - shell: wsl-bash {0}
         run: |
           export NEXTFLOW_VER="25.10.3"
@@ -47,6 +49,7 @@ jobs:
 
       - uses: Vampire/setup-wsl@v6
         with:
+          wsl-version: 2
           wsl-conf: |
             [boot]
             systemd=true
