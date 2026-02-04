@@ -8,30 +8,26 @@ on:
 
 jobs:
   build-push-wsl-image:
-    strategy:
-      matrix:
-        arch: ["linux/amd64", "linux/arm64"]
     runs-on: windows-latest
     steps:
       - name: Install or update WSL
         uses: Ubuntu/WSL/.github/actions/wsl-install@main
         with:
-          distro: Ubuntu-22.04
+          distro: Ubuntu 22.04 LTS
       - name: Check out the repository
         uses: Ubuntu/WSL/.github/actions/wsl-checkout@main
         with:
-          distro: Ubuntu-22.04
-          working-dir: /tmp/GLACIER/
+          distro: Ubuntu 22.04 LTS
           submodules: true
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install dependencies
         uses: Ubuntu/WSL/.github/actions/wsl-bash@main
         with:
-          distro: Ubuntu-22.04
+          distro: Ubuntu 22.04 LTS
           working-dir: /tmp/github/
           exec: |
             DEBIAN_FRONTEND=noninteractive wsl-image/build-image.sh
       - name: Export WSL image
         shell: powershell
         run: |
-          wsl.exe --export Ubuntu-22.04 /tmp/glacier-${ { matrix.arch == 'linux/amd64' && 'amd64' || 'arm64' } }-glacier.tar
+          wsl.exe --export "Ubuntu 22.04 LTS" /tmp/glacier-${ { matrix.arch == 'linux/amd64' && 'amd64' || 'arm64' } }-glacier.tar
