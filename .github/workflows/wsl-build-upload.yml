@@ -7,7 +7,7 @@ on:
       - wsl-build-action
 
 jobs:
-  build-push-wsl-image:
+  build-wsl-image:
     runs-on: windows-latest
     steps:
       - uses: Vampire/setup-wsl@v6
@@ -56,25 +56,20 @@ jobs:
             [user]
             default=user
 
-      # - name: Install or update WSL
-      #   uses: Ubuntu/WSL/.github/actions/wsl-install@main
-      #   with:
-      #     distro: Ubuntu-22.04
-      # - name: Check out the repository
-      #   uses: Ubuntu/WSL/.github/actions/wsl-checkout@main
-      #   with:
-      #     distro: Ubuntu-22.04
-      #     working-dir: /tmp/GLACIER/
-      #     submodules: true
-      #     token: ${{ secrets.GITHUB_TOKEN }}
-      # - name: Install dependencies
-      #   uses: Ubuntu/WSL/.github/actions/wsl-bash@main
-      #   with:
-      #     distro: Ubuntu-22.04
-      #     working-dir: /tmp/GLACIER/
-      #     exec: |
-      #       DEBIAN_FRONTEND=noninteractive wsl-image/build-image.sh
       - name: Export WSL image
         shell: powershell
         run: |
-          wsl.exe --export Ubuntu-22.04 /tmp/glacier.tar
+          wsl.exe --export Ubuntu-22.04 glacier.tar
+
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - uses: shallwefootball/s3-upload-action@master
+        with:
+          aws_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+          aws_bucket: "loman-labz-public-datasets"
+          endpoint: "https://s3.climb.ac.uk"
+          source_dir: "glacier.tar"
+          destination_dir: "glacier-ubuntu-22.04.tar"
