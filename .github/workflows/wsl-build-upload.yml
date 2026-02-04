@@ -45,7 +45,6 @@ jobs:
           sed -i 's/127.0.1.1.*/127.0.1.1 glacier/' /etc/hosts
 
           systemctl enable docker
-          systemctl start docker
 
       - uses: Vampire/setup-wsl@v6
         with:
