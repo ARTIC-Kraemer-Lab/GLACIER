@@ -49,6 +49,7 @@ jobs:
       - uses: Vampire/setup-wsl@v6
         with:
           wsl-version: 2
+          distribution: Ubuntu-22.04
           wsl-conf: |
             [boot]
             systemd=true
@@ -59,6 +60,7 @@ jobs:
       - name: Export WSL image
         shell: powershell
         run: |
+          wsl.exe --list --verbose
           wsl.exe --export Ubuntu-22.04 glacier.tar
 
   upload:
