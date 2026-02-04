@@ -1,0 +1,35 @@
+name: quay_build_push
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-push-wsl-image:
+    strategy:
+      matrix:
+        arch: ["linux/amd64", "linux/arm64"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install or update WSL
+        uses: Ubuntu/WSL/.github/actions/wsl-install@main
+        with:
+          distro: Ubuntu-22.04
+      - name: Check out the repository
+        uses: Ubuntu/WSL/.github/actions/wsl-checkout@main
+        with:
+          distro: Ubuntu-22.04
+          working-dir: /tmp/GLACIER/
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install dependencies
+        uses: Ubuntu/WSL/.github/actions/wsl-bash@main
+        with:
+          distro: Ubuntu-22.04
+          working-dir: /tmp/github/
+          exec: |
+            DEBIAN_FRONTEND=noninteractive wsl-image/build-image.sh
+      - name: Export WSL image
+        run: |
+          wsl.exe --export Ubuntu-22.04 /tmp/glacier-${ { matrix.arch == 'linux/amd64' && 'amd64' || 'arm64' } }-glacier.tar
