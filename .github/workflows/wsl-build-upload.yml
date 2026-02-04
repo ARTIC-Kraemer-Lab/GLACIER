@@ -1,4 +1,4 @@
-name: quay_build_push
+name: wsl-build-upload
 
 on:
   push:
@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         arch: ["linux/amd64", "linux/arm64"]
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - name: Install or update WSL
         uses: Ubuntu/WSL/.github/actions/wsl-install@main
@@ -32,5 +32,6 @@ jobs:
           exec: |
             DEBIAN_FRONTEND=noninteractive wsl-image/build-image.sh
       - name: Export WSL image
+        shell: powershell
         run: |
           wsl.exe --export Ubuntu-22.04 /tmp/glacier-${ { matrix.arch == 'linux/amd64' && 'amd64' || 'arm64' } }-glacier.tar
