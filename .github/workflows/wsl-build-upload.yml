@@ -7,7 +7,7 @@ on:
       - wsl-build-action
 
 jobs:
-  build-wsl-image:
+  build-push-wsl-image:
     runs-on: windows-latest
     steps:
       - uses: Vampire/setup-wsl@v6
@@ -63,10 +63,6 @@ jobs:
           wsl.exe --list --verbose
           wsl.exe --export Ubuntu glacier.tar
 
-  upload:
-    runs-on: ubuntu-latest
-    needs: build-wsl-image
-    steps:
       - uses: actions/checkout@master
       - uses: shallwefootball/s3-upload-action@master
         with:
@@ -75,4 +71,4 @@ jobs:
           aws_bucket: "loman-labz-public-datasets"
           endpoint: "https://s3.climb.ac.uk"
           source_dir: "glacier.tar"
-          destination_dir: "glacier-ubuntu-22.04.tar"
+          destination_dir: "glacier-ubuntu_22.04-nextflow_25.10.3.tar"
