@@ -87,4 +87,4 @@ jobs:
         run: |
           aws configure set aws_access_key_id $aws_key_id
           aws configure set aws_secret_access_key $aws_secret_access_key 
-          aws s3 cp glacier.tar s3://$aws_s3_bucket/glacier-ubuntu_22.04-nextflow_25.10.3.wsl
+          aws s3 --endpoint-url https://s3.climb.ac.uk cp glacier.tar s3://$aws_s3_bucket/glacier-ubuntu_22.04-nextflow_25.10.3.wsl
