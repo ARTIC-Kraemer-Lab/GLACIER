@@ -10,24 +10,63 @@ jobs:
   build-push-wsl-image:
     runs-on: windows-latest
     steps:
-      - name: Install or update WSL
-        uses: Ubuntu/WSL/.github/actions/wsl-install@main
+      - uses: Vampire/setup-wsl@v6
         with:
-          distro: Ubuntu 22.04 LTS
-      - name: Check out the repository
-        uses: Ubuntu/WSL/.github/actions/wsl-checkout@main
-        with:
-          distro: Ubuntu 22.04 LTS
-          submodules: true
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install dependencies
-        uses: Ubuntu/WSL/.github/actions/wsl-bash@main
-        with:
-          distro: Ubuntu 22.04 LTS
-          working-dir: /tmp/github/
-          exec: |
-            DEBIAN_FRONTEND=noninteractive wsl-image/build-image.sh
+          distribution: Ubuntu-22.04
+      - shell: wsl-bash {0}
+        run: |
+          export NEXTFLOW_VER="25.10.3"
+
+          sudo apt update
+          sudo apt upgrade -y
+          sudo apt install -y openjdk-21-jre-headless docker.io
+
+          useradd user
+          echo "user:user" | chpasswd
+          usermod -aG docker user
+
+          wget --directory-prefix /usr/local/bin/ https://github.com/nextflow-io/nextflow/releases/download/v${NEXTFLOW_VER}/nextflow
+
+          chmod 755 /usr/local/bin/nextflow
+
+          mkdir -p /home/user/.nextflow
+          chmod 755 /usr/local/bin/nextflow
+
+          nextflow info
+
+          chown -R user:user /home/user/.nextflow
+
+          usermod -aG docker user
+
+          cp wsl-image/wsl.conf /etc/wsl.conf
+          cp wsl-image/wsl-distribution.conf /etc/wsl-distribution.conf
+
+          echo "export PATH=/usr/local/bin:\$PATH" >> /home/user/.bashrc
+
+          sed -i 's/127.0.1.1.*/127.0.1.1 glacier/' /etc/hosts
+
+          systemctl enable docker
+          systemctl start docker
+
+      # - name: Install or update WSL
+      #   uses: Ubuntu/WSL/.github/actions/wsl-install@main
+      #   with:
+      #     distro: Ubuntu-22.04
+      # - name: Check out the repository
+      #   uses: Ubuntu/WSL/.github/actions/wsl-checkout@main
+      #   with:
+      #     distro: Ubuntu-22.04
+      #     working-dir: /tmp/GLACIER/
+      #     submodules: true
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Install dependencies
+      #   uses: Ubuntu/WSL/.github/actions/wsl-bash@main
+      #   with:
+      #     distro: Ubuntu-22.04
+      #     working-dir: /tmp/GLACIER/
+      #     exec: |
+      #       DEBIAN_FRONTEND=noninteractive wsl-image/build-image.sh
       - name: Export WSL image
         shell: powershell
         run: |
-          wsl.exe --export "Ubuntu 22.04 LTS" /tmp/glacier-${ { matrix.arch == 'linux/amd64' && 'amd64' || 'arm64' } }-glacier.tar
+          wsl.exe --export Ubuntu-22.04 /tmp/glacier.tar
