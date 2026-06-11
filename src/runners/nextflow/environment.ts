@@ -3,13 +3,18 @@ import { mkdirSync, chmodSync, createWriteStream } from 'fs';
 import { execFileSync, spawn } from 'child_process';
 import path from 'path';
 
-import pkg from 'electron';
-const { shell } = pkg;
-
 const is_windows = process.platform === 'win32';
 const is_electron = process.versions?.electron !== undefined;
 const nextflowPath = path.join(process.env.HOME || '', 'GLACIER', 'bin', 'nextflow');
 const distroPath = path.join(process.env.HOME || '', 'GLACIER', 'wsl', 'ubuntu-22.04.tar.xz');
+
+async function openExternal(url: string) {
+  if (!is_electron) {
+    throw new Error('This action is only available in the Electron app.');
+  }
+  const { shell } = await import('electron');
+  return shell.openExternal(url);
+}
 
 export async function nextflowStatus() {
   if (is_windows) {
@@ -292,8 +297,8 @@ function installWSL2distro() {
   });
 }
 
-function installDocker() {
+async function installDocker() {
   // open Docker download page
-  shell.openExternal('https://www.docker.com/products/docker-desktop/');
+  await openExternal('https://www.docker.com/products/docker-desktop/');
   return { ok: true };
 }
