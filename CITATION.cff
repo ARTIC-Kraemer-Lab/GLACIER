@@ -1,0 +1,43 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+
+title: "GLACIER: Graphical Launchpad for Analysis, Computation, Inference and Explication of Results"
+
+authors:
+  - family-names: "Brittain"
+    given-names: "John-Stuart"
+    orcid: "https://orcid.org/0000-0002-4172-190X"
+
+  - family-names: "Wilkinson"
+    given-names: "Sam A. J."
+    orcid: "https://orcid.org/0000-0002-6944-5927"
+
+  - family-names: "Loman"
+    given-names: "Nicholas"
+    orcid: "https://orcid.org/0000-0002-9843-8988"
+
+  - family-names: "O'Toole"
+    given-names: "Áine Niamh"
+    orcid: "https://orcid.org/0000-0001-8083-474X"
+
+  - family-names: "Constantinides"
+    given-names: "Bede"
+    orcid: "https://orcid.org/0000-0002-3480-3819"
+
+  - family-names: "Tsui"
+    given-names: "Joseph"
+    orcid: "https://orcid.org/0000-0001-7871-8627"
+
+  - family-names: "Rambaut"
+    given-names: "Andrew"
+    orcid: "https://orcid.org/0000-0003-4337-3707"
+
+  - family-names: "Kraemer"
+    given-names: "Moritz"
+    orcid: "https://orcid.org/0000-0001-8838-7147"
+
+version: "1.0.0-beta.1"
+doi: "10.5281/zenodo.21980096"
+date-released: 2026-08-17
+url: "https://github.com/ARTIC-Kraemer-Lab/GLACIER"
+license: "GPL-3.0-only"
