@@ -1,6 +1,6 @@
 # GLACIER
 
-[![GLACIER](https://github.com/ARTIC-Kraemer-Lab/GLACIER/actions/workflows/GLACIER.yml/badge.svg)](https://github.com/ARTIC-Kraemer-Lab/GLACIER/actions/workflows/GLACIER.yml) [![Documentation Status](https://readthedocs.org/projects/glacier/badge/?version=latest)](https://glacier.readthedocs.io/en/latest/?badge=latest)
+[![GLACIER](https://github.com/ARTIC-Kraemer-Lab/GLACIER/actions/workflows/GLACIER.yml/badge.svg)](https://github.com/ARTIC-Kraemer-Lab/GLACIER/actions/workflows/GLACIER.yml) [![Documentation Status](https://readthedocs.org/projects/glacier/badge/?version=latest)](https://glacier.readthedocs.io/en/latest/?badge=latest) [![DOI](https://zenodo.org/badge/1017435695.svg)](https://doi.org/10.5281/zenodo.21980095)
 
 **G**raphical **L**aunchpad for **A**nalysis,**C**omputation, **I**nference and **E**xplication of **R**esults
 
