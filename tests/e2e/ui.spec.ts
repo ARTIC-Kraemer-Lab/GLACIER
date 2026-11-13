@@ -154,6 +154,48 @@ test('launch local workflow', async ({ page }) => {
   });
 });
 
+test('parameters are reachable from the tab panel', async ({ page }) => {
+  const local_collections_path = path.resolve(path.join(__dirname, '..', 'test-data'));
+
+  // Point GLACIER at the local test collections
+  await page.click('#sidebar-settings-button');
+  await page.click('#settings-general-panel');
+  const docs_path = path.resolve(path.join(os.tmpdir(), 'GLACIER-docs-' + Date.now().toString()));
+  fs.mkdirSync(docs_path, { recursive: true });
+  await page.click('#settings-reopen-setup');
+  await page.fill('#setup-config-folder', `${local_collections_path}`);
+  await page.fill('#setup-documents-folder', `${docs_path}`);
+  await page.click('#setup-continue-button');
+
+  // Create an instance of the local sleep workflow (redirects to Parameters page)
+  await page.click('#sidebar-library-button');
+  await page.click(`#card-${cssEscape('sleep')}`);
+
+  // The header should not duplicate the Parameters tab with its own button
+  await expect(page.getByRole('button', { name: 'Params', exact: true })).toHaveCount(0);
+
+  // Description is shown first; Load/Save belong to the Parameters tab
+  await expect(page.locator('#parameters-info-tab')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('button', { name: 'Load', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Save', exact: true })).toHaveCount(0);
+
+  // Selecting the Parameters tab reveals the form and the Load/Save actions
+  await page.click('#parameters-params-tab');
+  await expect(page.locator('#parameters-params-tab')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByLabel('Sleep Time')).toBeVisible({ timeout: TIMEOUT_10s });
+  await expect(page.getByRole('button', { name: 'Load', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeVisible();
+
+  // Launching with invalid parameters redirects back to the Parameters tab
+  await page.getByLabel('Sleep Time').fill('-1'); // below schema minimum
+  await page.getByLabel('Sleep Time').blur();
+  await page.click('#parameters-info-tab');
+  await expect(page.locator('#parameters-info-tab')).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('button', { name: 'Launch Workflow' }).click();
+  await expect(page.locator('#parameters-params-tab')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByLabel('Sleep Time')).toHaveValue('-1');
+});
+
 async function runOutdirWorkflow(
   page: Page,
   docsPath: string,
