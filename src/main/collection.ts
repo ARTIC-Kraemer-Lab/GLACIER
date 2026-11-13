@@ -1157,6 +1157,31 @@ export class Collection {
     }
   }
 
+  async getWorkflowInstanceProfile(instance: IWorkflowInstance): Promise<string | null> {
+    // Find instance
+    const local_instance = this.workflow_instances.find((inst) => inst.id === instance.id);
+    if (!local_instance) {
+      throw new Error(`Instance ${instance.id} not found in collection.`);
+    }
+    const filename = path.join(local_instance.path, 'glacier-profile.json');
+    const readResult = safeFs.readFileSync(filename);
+    if (!readResult.ok) {
+      console.log(`Profile file ${filename} does not exist.`);
+      return null;
+    }
+    try {
+      const parsed = JSON.parse(readResult.data);
+      const profile = parsed?.profile;
+      // Launches may store a single profile or a list of profiles.
+      if (typeof profile === 'string' && profile) return profile;
+      if (Array.isArray(profile) && profile.length > 0) return profile.join(',');
+    } catch {
+      /* fall through to null below */
+    }
+    console.warn(`Profile file ${filename} is corrupt or empty, returning null.`);
+    return null;
+  }
+
   async updateWorkflowInstanceStatus(instance: IWorkflowInstance): Promise<string> {
     // Run nextflow log and get last status
     // Find Instance

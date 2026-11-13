@@ -227,6 +227,15 @@
       "output": "Output",
       "no-reports": "No reports found"
     },
+    "parameters": {
+      "title": "Parameters",
+      "execution-profile": "Execution profile",
+      "not-recorded": "Not recorded",
+      "loading": "Loading parameters...",
+      "none": "This run was launched with no parameters.",
+      "no-schema": "The workflow schema is no longer available, showing the raw parameters.",
+      "raw-json": "Raw JSON"
+    },
     "execution": {
       "actions": "Actions",
       "cancel": "Cancel",

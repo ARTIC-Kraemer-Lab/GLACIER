@@ -707,6 +707,7 @@ export default function InstancesPage({
                 initialTab={initialMonitorTab}
                 showLaunchBanner={justLaunchedId === instance.id}
                 onLaunchBannerDismissed={() => setJustLaunchedId(null)}
+                showHiddenParams={showHiddenParams}
               />
             );
           })

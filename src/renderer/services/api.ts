@@ -13,6 +13,8 @@ const electronAPI = isElectron
       getInstanceProgress: (instance) => window.electronAPI.getInstanceProgress(instance),
       getWorkflowInstanceParams: (instance) =>
         window.electronAPI.getWorkflowInstanceParams(instance),
+      getWorkflowInstanceProfile: (instance) =>
+        window.electronAPI.getWorkflowInstanceProfile(instance),
       cancelWorkflowInstance: (instance) => window.electronAPI.cancelWorkflowInstance(instance),
       resetWorkflowInstanceStatus: (instance) =>
         window.electronAPI.resetWorkflowInstanceStatus(instance),
@@ -157,6 +159,8 @@ const httpAPI = {
     httpDispatch('/api/get-instance-progress', 'POST', { instance }),
   getWorkflowInstanceParams: async (instance) =>
     httpDispatch('/api/get-workflow-instance-params', 'POST', { instance }),
+  getWorkflowInstanceProfile: async (instance) =>
+    httpDispatch('/api/get-workflow-instance-profile', 'POST', { instance }),
   cancelWorkflowInstance: async (instance) =>
     httpDispatch('/api/cancel-workflow-instance', 'POST', { instance }),
   resetWorkflowInstanceStatus: async (instance) =>

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import HeaderMenu from './HeaderMenu';
 import ProgressTracker from './ProgressTracker';
+import LaunchedParameters from './LaunchedParameters';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -48,7 +49,8 @@ export default function MonitorPage({
   onRefresh,
   initialTab = 0,
   showLaunchBanner = false,
-  onLaunchBannerDismissed
+  onLaunchBannerDismissed,
+  showHiddenParams = false
 }) {
   const { t } = useTranslation();
   const [tabSelected, setTabSelected] = React.useState(initialTab);
@@ -84,6 +86,11 @@ export default function MonitorPage({
         <Tab label={t('monitor.progress.title')} />
         <Tab label={t('monitor.reports.title')} />
         <Tab label={t('monitor.logs.title')} />
+        <Tab
+          label={t('monitor.parameters.title')}
+          id="monitor-parameters-tab"
+          aria-controls="tabpanel-3"
+        />
       </Tabs>
       <TabPanel value={tabSelected} index={0}>
         <ProgressTracker instance={instance} onRefresh={onRefresh} />
@@ -93,6 +100,9 @@ export default function MonitorPage({
       </TabPanel>
       <TabPanel value={tabSelected} index={2}>
         <LogsPage instance={instance} />
+      </TabPanel>
+      <TabPanel value={tabSelected} index={3}>
+        <LaunchedParameters instance={instance} showHiddenParams={showHiddenParams} />
       </TabPanel>
     </Paper>
   );

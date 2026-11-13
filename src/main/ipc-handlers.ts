@@ -88,6 +88,10 @@ export function registerIpcHandlers(resourceRoot?: string) {
     return call(collection.getWorkflowInstanceParams.bind(collection), instance);
   });
 
+  ipcMain.handle('get-workflow-instance-profile', async (event, instance: any) => {
+    return call(collection.getWorkflowInstanceProfile.bind(collection), instance);
+  });
+
   ipcMain.handle('cancel-workflow-instance', async (event, instance: any) => {
     return call(collection.cancelWorkflowInstance.bind(collection), instance);
   });

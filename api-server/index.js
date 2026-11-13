@@ -136,6 +136,10 @@ app.post('/api/get-workflow-instance-params', async (req, res) =>
   post_response(res, call(collection.getWorkflowInstanceParams.bind(collection), req.body.instance))
 );
 
+app.post('/api/get-workflow-instance-profile', async (req, res) =>
+  post_response(res, call(collection.getWorkflowInstanceProfile.bind(collection), req.body.instance))
+);
+
 app.post('/api/cancel-workflow-instance', async (req, res) =>
   post_response(res, call(collection.cancelWorkflowInstance.bind(collection), req.body.instance))
 );
