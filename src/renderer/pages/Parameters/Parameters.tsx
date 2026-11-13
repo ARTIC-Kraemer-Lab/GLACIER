@@ -274,9 +274,6 @@ export default function ParametersPage({
           [{instance.name}] {instance.workflow_version.name}
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Button variant="outlined" onClick={() => setTabSelected(2)}>
-            {t('parameters.params-menu')}
-          </Button>
           {permitOverride ? (
             <>
               <ButtonGroup variant="contained">
