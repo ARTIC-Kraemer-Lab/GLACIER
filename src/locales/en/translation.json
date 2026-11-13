@@ -321,7 +321,7 @@
       "free-memory": "Free Memory",
       "total-memory": "Total Memory",
       "extra-paths": "Extra PATH entries",
-      "extra-paths-desc": "Colon-separated list of directories to add to PATH when launching Nextflow. Use this if Docker (or other tools Nextflow needs) is installed in a custom location.",
+      "extra-paths-desc": "Colon-separated list of directories to add to PATH when launching Nextflow. Use this if Docker (or other tools Nextflow needs) is installed in a custom location. Applies to macOS and Linux only.",
       "detect-docker": "Detect Docker"
     },
     "licenses": "Licenses"
