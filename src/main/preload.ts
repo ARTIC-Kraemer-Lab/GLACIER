@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getInstanceProgress: (instance: any) => ipcRenderer.invoke('get-instance-progress', instance),
   getWorkflowInstanceParams: (instance: any) =>
     ipcRenderer.invoke('get-workflow-instance-params', instance),
+  getWorkflowInstanceProfile: (instance: any) =>
+    ipcRenderer.invoke('get-workflow-instance-profile', instance),
   cancelWorkflowInstance: (instance: any) =>
     ipcRenderer.invoke('cancel-workflow-instance', instance),
   resetWorkflowInstanceStatus: (instance: any) =>

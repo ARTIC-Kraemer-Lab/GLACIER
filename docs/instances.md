@@ -39,10 +39,11 @@ Each instance is stored at:
 ```
 
 ```
-params.json        -- Parameters used for the run
-stdout.log         -- Nextflow standard output
-stderr.log         -- Nextflow standard error
-nextflow.log       -- Nextflow internal log
-work/              -- Nextflow work directory (per-task outputs)
-<reports>          -- HTML report files (e.g. articMinIONReport.html)
+glacier-params.json    -- Parameters passed to Nextflow on the most recent launch
+glacier-profile.json   -- Execution profile used for the most recent launch
+stdout.log             -- Nextflow standard output
+stderr.log             -- Nextflow standard error
+nextflow.log           -- Nextflow internal log
+work/                  -- Nextflow work directory (per-task outputs)
+<reports>              -- HTML report files (e.g. articMinIONReport.html)
 ```

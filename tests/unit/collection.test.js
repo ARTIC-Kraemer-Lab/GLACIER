@@ -545,6 +545,89 @@ describe('Collection', () => {
     });
   });
 
+  describe('getWorkflowInstanceProfile', () => {
+    it('reads a single profile from glacier-profile.json', async () => {
+      const instPath = path.join(tmpDir, 'instances', 'profile-single');
+      fs.mkdirSync(instPath, { recursive: true });
+      fs.writeFileSync(
+        path.join(instPath, 'glacier-profile.json'),
+        JSON.stringify({ profile: 'docker' }),
+        'utf8'
+      );
+      const instance = {
+        id: 'test',
+        name: 'test',
+        workflow_version: {},
+        path: instPath,
+        processes: [],
+        status: 'completed'
+      };
+      collection.workflow_instances = [instance];
+
+      const profile = await collection.getWorkflowInstanceProfile(instance);
+
+      expect(profile).toBe('docker');
+    });
+
+    it('joins a list of profiles', async () => {
+      const instPath = path.join(tmpDir, 'instances', 'profile-list');
+      fs.mkdirSync(instPath, { recursive: true });
+      fs.writeFileSync(
+        path.join(instPath, 'glacier-profile.json'),
+        JSON.stringify({ profile: ['docker', 'test'] }),
+        'utf8'
+      );
+      const instance = {
+        id: 'test',
+        name: 'test',
+        workflow_version: {},
+        path: instPath,
+        processes: [],
+        status: 'completed'
+      };
+      collection.workflow_instances = [instance];
+
+      const profile = await collection.getWorkflowInstanceProfile(instance);
+
+      expect(profile).toBe('docker,test');
+    });
+
+    it('returns null if glacier-profile.json is missing', async () => {
+      const instance = {
+        id: 'test',
+        name: 'test',
+        workflow_version: {},
+        path: '/nonexistent',
+        processes: [],
+        status: 'completed'
+      };
+      collection.workflow_instances = [instance];
+
+      const profile = await collection.getWorkflowInstanceProfile(instance);
+
+      expect(profile).toBeNull();
+    });
+
+    it('returns null if glacier-profile.json is corrupt', async () => {
+      const instPath = path.join(tmpDir, 'instances', 'profile-corrupt');
+      fs.mkdirSync(instPath, { recursive: true });
+      fs.writeFileSync(path.join(instPath, 'glacier-profile.json'), 'not json', 'utf8');
+      const instance = {
+        id: 'test',
+        name: 'test',
+        workflow_version: {},
+        path: instPath,
+        processes: [],
+        status: 'completed'
+      };
+      collection.workflow_instances = [instance];
+
+      const profile = await collection.getWorkflowInstanceProfile(instance);
+
+      expect(profile).toBeNull();
+    });
+  });
+
   describe('updateWorkflowInstanceStatus', () => {
     it('returns Running when no workflow progress', async () => {
       const instance = {

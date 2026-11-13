@@ -221,6 +221,15 @@
       "no-reports": "Aucun rapport trouvé",
       "select-report": "Sélectionner le rapport"
     },
+    "parameters": {
+      "title": "Paramètres",
+      "execution-profile": "Profil d'exécution",
+      "not-recorded": "Non enregistré",
+      "loading": "Chargement des paramètres...",
+      "none": "Cette exécution a été lancée sans paramètres.",
+      "no-schema": "Le schéma du workflow n'est plus disponible ; affichage des paramètres bruts.",
+      "raw-json": "JSON brut"
+    },
     "execution": {
       "actions": "Actions",
       "cancel": "Annuler",

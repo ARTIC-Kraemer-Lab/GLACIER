@@ -61,3 +61,15 @@ Three sub-tabs provide live-updating logs:
 | **nextflow.log** | Nextflow's internal log file. | 1 second |
 
 Log content is rendered with ANSI colour support for readability.
+
+## Parameters tab
+
+The Parameters tab shows a read-only view of the settings that were used for the most recent launch of the instance:
+
+- **Execution profile** — the Nextflow profile (or comma-separated profiles) saved at launch, or *Not recorded* for runs launched before profiles were stored.
+- **Parameters** — the values written to `glacier-params.json` and passed to Nextflow, rendered with the workflow's own schema. Fields are disabled; nothing can be edited, validated or relaunched from this tab.
+- **Raw JSON** — expand this section to see the exact contents of `glacier-params.json`, including any values outside the workflow schema.
+
+If the run was launched with no parameters (for example a self-test launch), the tab states that no parameters were recorded. If the workflow's schema is no longer available (for example the workflow version was uninstalled), the raw parameters are shown instead.
+
+To change the settings, use **Actions → Restart**, which returns to the editable Parameters page.

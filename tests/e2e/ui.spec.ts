@@ -152,6 +152,19 @@ test('launch local workflow', async ({ page }) => {
   await expect(page.getByText('Completed')).toBeVisible({
     timeout: TIMEOUT_WORKFLOW
   });
+
+  // The launched parameters are reviewable, read-only, from the Monitor page
+  await page.click('#monitor-parameters-tab');
+  await expect(page.locator('#monitor-parameters-tab')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#monitor-parameters-profile')).toContainText('standard');
+  const sleepTime = page.getByLabel('Sleep Time');
+  await expect(sleepTime).toHaveValue('5');
+  await expect(sleepTime).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Launch Workflow' })).toHaveCount(0);
+
+  // The raw parameters are available verbatim
+  await page.getByText('Raw JSON').click();
+  await expect(page.locator('pre').filter({ hasText: '"sleep_time": 5' })).toBeVisible();
 });
 
 test('parameters are reachable from the tab panel', async ({ page }) => {
