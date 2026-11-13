@@ -716,7 +716,31 @@ describe('Collection', () => {
   });
 
   describe('openResultsFolder', () => {
-    it('opens the instance path via shell', async () => {
+    it('opens the workflow output folder when it exists', async () => {
+      const instPath = path.join(tmpDir, 'instances', 'test-instance');
+      fs.mkdirSync(instPath, { recursive: true });
+      const workflow = makeWorkflow();
+      collection.workflows = [workflow];
+      const outputRoot = path.join(tmpDir, 'output');
+      vi.mocked(paths.getOutputPath).mockReturnValueOnce(outputRoot);
+      const outputPath = path.join(outputRoot, 'owner', 'repo@v1.0', 'test');
+      fs.mkdirSync(outputPath, { recursive: true });
+      const instance = {
+        id: 'test',
+        name: 'test',
+        workflow_version: workflow.versions[0],
+        path: instPath,
+        processes: []
+      };
+      collection.workflow_instances = [instance];
+
+      await collection.openResultsFolder(instance);
+
+      const mockShell = await getShell();
+      expect(mockShell.openPath).toHaveBeenCalledWith(outputPath);
+    });
+
+    it('falls back to the instance path when no output folder exists', async () => {
       const instPath = path.join(tmpDir, 'instances', 'test-instance');
       fs.mkdirSync(instPath, { recursive: true });
       const instance = {
@@ -745,6 +769,44 @@ describe('Collection', () => {
       collection.workflow_instances = [instance];
 
       await expect(collection.openResultsFolder(instance)).rejects.toThrow('does not exist');
+    });
+  });
+
+  describe('openInstanceFolder', () => {
+    it('opens the instance path even when an output folder exists', async () => {
+      const instPath = path.join(tmpDir, 'instances', 'test-instance');
+      fs.mkdirSync(instPath, { recursive: true });
+      const workflow = makeWorkflow();
+      collection.workflows = [workflow];
+      const outputRoot = path.join(tmpDir, 'output');
+      vi.mocked(paths.getOutputPath).mockReturnValueOnce(outputRoot);
+      fs.mkdirSync(path.join(outputRoot, 'owner', 'repo@v1.0', 'test'), { recursive: true });
+      const instance = {
+        id: 'test',
+        name: 'test',
+        workflow_version: workflow.versions[0],
+        path: instPath,
+        processes: []
+      };
+      collection.workflow_instances = [instance];
+
+      await collection.openInstanceFolder(instance);
+
+      const mockShell = await getShell();
+      expect(mockShell.openPath).toHaveBeenCalledWith(instPath);
+    });
+
+    it('throws for missing folder', async () => {
+      const instance = {
+        id: 'test',
+        name: 'test',
+        workflow_version: {},
+        path: '/nonexistent',
+        processes: []
+      };
+      collection.workflow_instances = [instance];
+
+      await expect(collection.openInstanceFolder(instance)).rejects.toThrow('does not exist');
     });
   });
 

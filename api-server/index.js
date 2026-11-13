@@ -160,6 +160,10 @@ app.post('/api/open-results-folder', async (req, res) =>
   post_response(res, call(collection.openResultsFolder.bind(collection), req.body.instance))
 );
 
+app.post('/api/open-instance-folder', async (req, res) =>
+  post_response(res, call(collection.openInstanceFolder.bind(collection), req.body.instance))
+);
+
 app.post('/api/get-instance-disk-usage', async (req, res) =>
   post_response(res, call(collection.getInstanceDiskUsage.bind(collection), req.body.instance))
 );
