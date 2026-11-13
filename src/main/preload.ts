@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('delete-workflow-instance', instance),
   deleteInstanceOutput: (instance: any) => ipcRenderer.invoke('delete-instance-output', instance),
   openResultsFolder: (instance: any) => ipcRenderer.invoke('open-results-folder', instance),
+  openInstanceFolder: (instance: any) => ipcRenderer.invoke('open-instance-folder', instance),
   updateWorkflowInstanceStatus: (instance: any) =>
     ipcRenderer.invoke('update-workflow-instance-status', instance),
   getInstanceReportsList: (instance: any) =>

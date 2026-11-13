@@ -112,6 +112,10 @@ export function registerIpcHandlers(resourceRoot?: string) {
     return call(collection.openResultsFolder.bind(collection), instance);
   });
 
+  ipcMain.handle('open-instance-folder', async (event, instance: any) => {
+    return call(collection.openInstanceFolder.bind(collection), instance);
+  });
+
   ipcMain.handle('get-instance-disk-usage', async (event, instance: any) => {
     return call(collection.getInstanceDiskUsage.bind(collection), instance);
   });

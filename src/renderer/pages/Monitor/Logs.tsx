@@ -53,7 +53,7 @@ export default function LogsPage({ instance }: { instance: any }) {
   };
 
   const handleOpenFolder = async () => {
-    const result = await API.openResultsFolder(instance);
+    const result = await API.openInstanceFolder(instance);
     if (!result.ok) {
       setOpenError(result.error?.message || 'Unable to open folder.');
       return;

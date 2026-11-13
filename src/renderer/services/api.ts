@@ -20,6 +20,7 @@ const electronAPI = isElectron
       deleteWorkflowInstance: (instance) => window.electronAPI.deleteWorkflowInstance(instance),
       deleteInstanceOutput: (instance) => window.electronAPI.deleteInstanceOutput(instance),
       openResultsFolder: (instance) => window.electronAPI.openResultsFolder(instance),
+      openInstanceFolder: (instance) => window.electronAPI.openInstanceFolder(instance),
       openLogFile: (instance, logType) => window.electronAPI.openLogFile(instance, logType),
       openWorkLogFile: (instance, workID, logType) =>
         window.electronAPI.openWorkLogFile(instance, workID, logType),
@@ -168,6 +169,8 @@ const httpAPI = {
     httpDispatch('/api/delete-instance-output', 'POST', { instance }),
   openResultsFolder: async (instance) =>
     httpDispatch('/api/open-results-folder', 'POST', { instance }),
+  openInstanceFolder: async (instance) =>
+    httpDispatch('/api/open-instance-folder', 'POST', { instance }),
   openLogFile: async (instance, logType) =>
     httpDispatch('/api/open-log-file', 'POST', { instance, logType }),
   openWorkLogFile: async (instance, workID, logType) =>

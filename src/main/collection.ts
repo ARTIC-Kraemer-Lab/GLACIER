@@ -1435,12 +1435,28 @@ export class Collection {
     if (!local_instance) {
       throw new Error(`Instance ${instance.id} not found in collection.`);
     }
-    const folderPath = local_instance.path;
+    // Prefer the workflow output folder, falling back to the instance folder for
+    // runs without a separate output directory (e.g. autoOutdir disabled).
+    const folderPath = this.getOutputPathForInstance(instance) || local_instance.path;
     if (safeFs.existsSync(folderPath)) {
       const s = await getShell();
       return s.openPath(folderPath);
     } else {
       throw new Error(`Results folder ${folderPath} does not exist.`);
+    }
+  }
+
+  async openInstanceFolder(instance: IWorkflowInstance) {
+    const local_instance = this.workflow_instances.find((inst) => inst.id === instance.id);
+    if (!local_instance) {
+      throw new Error(`Instance ${instance.id} not found in collection.`);
+    }
+    const folderPath = local_instance.path;
+    if (safeFs.existsSync(folderPath)) {
+      const s = await getShell();
+      return s.openPath(folderPath);
+    } else {
+      throw new Error(`Instance folder ${folderPath} does not exist.`);
     }
   }
 
