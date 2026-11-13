@@ -29,6 +29,21 @@ const resolvePath = (base: string, name: string) => {
   return rtn;
 };
 
+// POSIX single-quote a value so it survives `bash -lc "<cmd>"`.
+const shQuote = (value: string) => `'${String(value).replace(/'/g, `'\\''`)}'`;
+
+// Environment that GLACIER adds on top of the inherited environment. Shared by
+// the macOS/Linux spawn path and the Windows/WSL command prefix so the two
+// launchers cannot drift apart again (see issue #311).
+const getNextflowEnvOverrides = (): Record<string, string> => {
+  const overrides: Record<string, string> = {};
+  try {
+    const parser = settings.get('nextflowSyntaxParser');
+    if (parser) overrides.NXF_SYNTAX_PARSER = `v${parser}`;
+  } catch {}
+  return overrides;
+};
+
 // Read the profile saved at launch (glacier-profile.json). Returns undefined
 // when the file is missing or unreadable so callers can fall back gracefully.
 const readStoredProfile = async (file: string): Promise<string | undefined> => {
@@ -111,10 +126,7 @@ const get_electron_paths = async () => {
     };
   }
 
-  const syntaxParser = settings.get('nextflowSyntaxParser');
-  if (syntaxParser) {
-    env.NXF_SYNTAX_PARSER = `v${syntaxParser}`;
-  }
+  Object.assign(env, getNextflowEnvOverrides());
 
   try {
     const extraPaths = (settings.get('extraPaths') || '').trim();
@@ -208,9 +220,8 @@ export async function runWorkflow(
 
   if (is_windows) {
     const args = [
-      'nextflow',
       '-log',
-      toPosixPath(path.join(instancePath, 'nextflow.log')),
+      resolvePath(instancePath, 'nextflow.log'),
       'run',
       toPosixPath(path.resolve(projectPath)),
       '-work-dir',
@@ -225,14 +236,31 @@ export async function runWorkflow(
     if (resume) {
       args.push('-resume');
     }
-    const cmd = args.join(' ');
+    if (customConfig) {
+      args.push('-c', toPosixPath(path.resolve(instancePath, 'user.config')));
+    }
+
+    // Nextflow runs inside WSL, whose environment is rebuilt from the login
+    // shell: neither the Windows environment nor spawn's `env` option crosses
+    // that boundary. Prefix the command instead (issue #311).
+    //
+    // `extraPaths` is intentionally not forwarded here: it holds host paths,
+    // which are meaningless inside the WSL filesystem.
+    const envPrefix = Object.entries(getNextflowEnvOverrides())
+      .map(([key, value]) => `${key}=${shQuote(value)}`)
+      .join(' ');
+
+    // Quote every argument: the whole command is handed to `bash -lc` as a
+    // single string, so unquoted paths/names containing spaces would split.
+    const nextflowCmd = ['nextflow', ...args.map(shQuote)].join(' ');
+    const cmd = envPrefix ? `${envPrefix} ${nextflowCmd}` : nextflowCmd;
 
     const bashArgs = [
       cmd,
       '>',
-      resolvePath(instancePath, 'stdout.log'),
+      shQuote(resolvePath(instancePath, 'stdout.log')),
       '2>',
-      resolvePath(instancePath, 'stderr.log'),
+      shQuote(resolvePath(instancePath, 'stderr.log')),
       '<',
       '/dev/null'
     ];
@@ -241,7 +269,7 @@ export async function runWorkflow(
     console.log(`Spawning nextflow with command: ${cmd} from ${instancePath}`);
 
     // Show the run name in the minimized WSL console so the user can identify it
-    const titledBashCmd = `echo "GLACIER run: ${name}" && ${bashCmd}`;
+    const titledBashCmd = `echo ${shQuote(`GLACIER run: ${name}`)} && ${bashCmd}`;
 
     const p = spawn(
       'cmd.exe',
@@ -357,9 +385,7 @@ export async function runWorkflow(
       });
     } else {
       // Client-server (assume nextflow on path for now)
-      const nxfEnv = { ...process.env };
-      const parserVal = settings.get('nextflowSyntaxParser');
-      if (parserVal) nxfEnv.NXF_SYNTAX_PARSER = `v${parserVal}`;
+      const nxfEnv = { ...process.env, ...getNextflowEnvOverrides() };
       try {
         const extraPaths = (settings.get('extraPaths') || '').trim();
         if (extraPaths) {

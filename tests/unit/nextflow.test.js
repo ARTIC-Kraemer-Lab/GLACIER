@@ -14,7 +14,8 @@ vi.mock('child_process', () => ({
 }));
 
 vi.mock('slash', () => ({
-  default: vi.fn((s) => s)
+  // Mirror the real package so path conversion is exercised on Windows too
+  default: vi.fn((s) => (typeof s === 'string' ? s.replace(/\\/g, '/') : s))
 }));
 
 vi.mock('../../src/main/settings.js', () => ({
@@ -407,6 +408,223 @@ describe('nextflow', () => {
 
       const env = mockSpawn.mock.calls[0][2].env;
       expect(env.NXF_SYNTAX_PARSER).toBeUndefined();
+    });
+  });
+
+  describe('runWorkflow — Windows / WSL', () => {
+    let winRunWorkflow;
+    let origPlatformWin;
+    let settingsMap;
+
+    // Helper: the raw string handed to `wsl.exe ... bash -lc <string>`.
+    const rawBashCommand = () => {
+      const argv = mockSpawn.mock.calls[0][1];
+      return argv[argv.indexOf('-lc') + 1];
+    };
+
+    // Same string, with any `/mnt/<drive>/` anchor removed. Fixture paths carry
+    // no drive letter, so on Windows `path.resolve` anchors them to the runner's
+    // cwd drive; dropping it keeps the assertions host-independent.
+    const bashCommand = () => rawBashCommand().replace(/\/mnt\/[a-z]\//g, '/');
+
+    beforeEach(async () => {
+      origPlatformWin = Object.getOwnPropertyDescriptor(process, 'platform');
+      Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+      settingsMap = {};
+      mockSettings.get.mockImplementation((key) => settingsMap[key]);
+      vi.resetModules();
+      const mod = await import('../../src/runners/nextflow/nextflow.js');
+      winRunWorkflow = mod.runWorkflow;
+    });
+
+    afterEach(() => {
+      if (origPlatformWin) {
+        Object.defineProperty(process, 'platform', origPlatformWin);
+      }
+      const spacedDir = path.resolve('/tmp/instances/my demo');
+      if (fs.existsSync(spacedDir)) {
+        fs.rmSync(spacedDir, { recursive: true, force: true });
+      }
+      vi.resetModules();
+    });
+
+    describe('spawn invocation', () => {
+      it('launches nextflow through cmd.exe, start and wsl.exe', async () => {
+        await winRunWorkflow(makeInstance(), {});
+
+        expect(mockSpawn).toHaveBeenCalledWith(
+          'cmd.exe',
+          expect.arrayContaining([
+            '/c',
+            'start',
+            '/MIN',
+            '/WAIT',
+            'wsl.exe',
+            '-d',
+            'glacier',
+            '-e',
+            'bash',
+            '-lc'
+          ]),
+          expect.objectContaining({
+            cwd: DEFAULT_INSTANCE_PATH,
+            stdio: 'ignore',
+            detached: true,
+            windowsHide: true
+          })
+        );
+      });
+
+      it('does not rely on spawn env (it cannot cross into WSL)', async () => {
+        await winRunWorkflow(makeInstance(), {});
+
+        expect(mockSpawn.mock.calls[0][2].env).toBeUndefined();
+      });
+
+      it('uses the WSL launcher even in Electron mode', async () => {
+        const origVersions = process.versions;
+        Object.defineProperty(process, 'versions', {
+          value: { ...process.versions, electron: '28.0.0' },
+          configurable: true
+        });
+        try {
+          await winRunWorkflow(makeInstance(), {});
+
+          expect(mockSpawn.mock.calls[0][0]).toBe('cmd.exe');
+          expect(mockSpawn.mock.calls[0][2].env).toBeUndefined();
+        } finally {
+          Object.defineProperty(process, 'versions', {
+            value: origVersions,
+            configurable: true
+          });
+        }
+      });
+
+      it('titles the WSL console with the run name', async () => {
+        await winRunWorkflow(makeInstance(), {});
+
+        const argv = mockSpawn.mock.calls[0][1];
+        const titledCmd = argv[argv.length - 1];
+        expect(titledCmd).toMatch(/^echo 'GLACIER run: test-name-[a-z0-9]+' && /);
+      });
+
+      it('returns the nextflow command in the descriptor', async () => {
+        const desc = await winRunWorkflow(makeInstance(), {});
+
+        expect(desc).not.toBeNull();
+        expect(desc.cmd).toContain('nextflow');
+        expect(desc.cmd).not.toContain('wsl.exe');
+      });
+    });
+
+    describe('NXF_SYNTAX_PARSER forwarding', () => {
+      it('prefixes NXF_SYNTAX_PARSER=v1 when set to 1', async () => {
+        settingsMap.nextflowSyntaxParser = '1';
+
+        await winRunWorkflow(makeInstance(), {});
+
+        expect(bashCommand()).toContain(`NXF_SYNTAX_PARSER='v1' nextflow`);
+      });
+
+      it('prefixes NXF_SYNTAX_PARSER=v2 when set to 2', async () => {
+        settingsMap.nextflowSyntaxParser = '2';
+
+        await winRunWorkflow(makeInstance(), {});
+
+        expect(bashCommand()).toContain(`NXF_SYNTAX_PARSER='v2'`);
+      });
+
+      it('does not prefix NXF_SYNTAX_PARSER when unset', async () => {
+        settingsMap.nextflowSyntaxParser = undefined;
+
+        await winRunWorkflow(makeInstance(), {});
+
+        const cmd = bashCommand();
+        expect(cmd).not.toContain('NXF_SYNTAX_PARSER');
+        expect(cmd).toContain(`&& nextflow '-log'`);
+      });
+    });
+
+    describe('command construction', () => {
+      it('passes log, project, work-dir, profile, params-file and name', async () => {
+        await winRunWorkflow(makeInstance(), {});
+
+        const cmd = bashCommand();
+        expect(cmd).toContain(`'-log' '/tmp/instances/test/nextflow.log'`);
+        expect(cmd).toContain(`'run' '/tmp/workflows/owner/repo'`);
+        expect(cmd).toContain(`'-work-dir' '/tmp/instances/test/work'`);
+        expect(cmd).toContain(`'-profile' 'standard'`);
+        expect(cmd).toContain(`'-params-file' '/tmp/instances/test/glacier-params.json'`);
+        expect(cmd).toMatch(/'-name' 'test-name-[a-z0-9]+'/);
+      });
+
+      it('appends -resume when resuming', async () => {
+        await winRunWorkflow(makeInstance(), {}, { resume: true });
+
+        expect(bashCommand()).toContain(`'-resume'`);
+      });
+
+      it('omits -resume for a fresh run', async () => {
+        await winRunWorkflow(makeInstance(), {}, { resume: false });
+
+        expect(bashCommand()).not.toContain(`'-resume'`);
+      });
+
+      it('passes the custom Nextflow config via -c', async () => {
+        settingsMap.customNextflowConfig = 'process { executor = "local" }';
+
+        await winRunWorkflow(makeInstance(), {});
+
+        expect(bashCommand()).toContain(`'-c' '/tmp/instances/test/user.config'`);
+      });
+
+      it('omits -c when no custom config is set', async () => {
+        await winRunWorkflow(makeInstance(), {});
+
+        expect(bashCommand()).not.toContain('/user.config');
+      });
+
+      it('quotes paths containing spaces', async () => {
+        const instance = makeInstance({ path: '/tmp/instances/my demo' });
+
+        await winRunWorkflow(instance, {});
+
+        const cmd = bashCommand();
+        expect(cmd).toContain(`'-work-dir' '/tmp/instances/my demo/work'`);
+        expect(cmd).toContain(`'-log' '/tmp/instances/my demo/nextflow.log'`);
+        expect(cmd).toContain(`'-params-file' '/tmp/instances/my demo/glacier-params.json'`);
+      });
+
+      it('escapes single quotes in quoted arguments', async () => {
+        const instance = makeInstance({ name: "it's a run" });
+
+        await winRunWorkflow(instance, {});
+
+        expect(bashCommand()).toContain(`'-name' 'it'\\''s a run-`);
+      });
+
+      it('converts paths to posix so bash can resolve them', async () => {
+        await winRunWorkflow(makeInstance(), {});
+
+        // Trivially true on macOS (POSIX paths); meaningful on Windows runners.
+        expect(rawBashCommand()).not.toContain('\\');
+      });
+
+      it('redirects stdout, stderr and stdin', async () => {
+        await winRunWorkflow(makeInstance(), {});
+
+        expect(bashCommand()).toMatch(
+          /> '\/tmp\/instances\/test\/stdout\.log' 2> '\/tmp\/instances\/test\/stderr\.log' < \/dev\/null$/
+        );
+      });
+
+      it('does not forward extraPaths (host paths are invalid in WSL)', async () => {
+        settingsMap.extraPaths = '/opt/docker/bin';
+
+        await winRunWorkflow(makeInstance(), {});
+
+        expect(bashCommand()).not.toContain('PATH=');
+      });
     });
   });
 
