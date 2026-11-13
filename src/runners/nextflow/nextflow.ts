@@ -221,7 +221,7 @@ export async function runWorkflow(
   if (is_windows) {
     const args = [
       '-log',
-      toPosixPath(path.join(instancePath, 'nextflow.log')),
+      resolvePath(instancePath, 'nextflow.log'),
       'run',
       toPosixPath(path.resolve(projectPath)),
       '-work-dir',

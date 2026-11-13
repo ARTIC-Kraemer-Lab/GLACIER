@@ -14,7 +14,8 @@ vi.mock('child_process', () => ({
 }));
 
 vi.mock('slash', () => ({
-  default: vi.fn((s) => s)
+  // Mirror the real package so path conversion is exercised on Windows too
+  default: vi.fn((s) => (typeof s === 'string' ? s.replace(/\\/g, '/') : s))
 }));
 
 vi.mock('../../src/main/settings.js', () => ({
@@ -415,11 +416,16 @@ describe('nextflow', () => {
     let origPlatformWin;
     let settingsMap;
 
-    // Helper: the string handed to `wsl.exe ... bash -lc <string>`.
-    const bashCommand = () => {
+    // Helper: the raw string handed to `wsl.exe ... bash -lc <string>`.
+    const rawBashCommand = () => {
       const argv = mockSpawn.mock.calls[0][1];
       return argv[argv.indexOf('-lc') + 1];
     };
+
+    // Same string, with any `/mnt/<drive>/` anchor removed. Fixture paths carry
+    // no drive letter, so on Windows `path.resolve` anchors them to the runner's
+    // cwd drive; dropping it keeps the assertions host-independent.
+    const bashCommand = () => rawBashCommand().replace(/\/mnt\/[a-z]\//g, '/');
 
     beforeEach(async () => {
       origPlatformWin = Object.getOwnPropertyDescriptor(process, 'platform');
@@ -595,6 +601,13 @@ describe('nextflow', () => {
         await winRunWorkflow(instance, {});
 
         expect(bashCommand()).toContain(`'-name' 'it'\\''s a run-`);
+      });
+
+      it('converts paths to posix so bash can resolve them', async () => {
+        await winRunWorkflow(makeInstance(), {});
+
+        // Trivially true on macOS (POSIX paths); meaningful on Windows runners.
+        expect(rawBashCommand()).not.toContain('\\');
       });
 
       it('redirects stdout, stderr and stdin', async () => {
