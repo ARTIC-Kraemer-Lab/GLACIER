@@ -30,7 +30,7 @@ For further information, see the [GLACIER documentation](https://glacier.readthe
 
 If you use GLACIER in your work, please cite the software using:
 
-**Brittain, J.-S., Wilkinson, S. A. J., Loman, N., O'Toole, Á. N., Constantinides, B., Tsui, J., Rambaut, A., & Kraemer, M. (2026). _GLACIER: Graphical Launchpad for Analysis, Computation, Inference and Explication of Results_. https://doi.org/10.5281/zenodo.21980096.**
+**Brittain, J.-S., Wilkinson, S. A. J., Loman, N., O'Toole, Á. N., Constantinides, B., Tsui, J., Rambaut, A., & Kraemer, M. (2026). _GLACIER: Graphical Launchpad for Analysis, Computation, Inference and Explication of Results_. https://doi.org/10.5281/zenodo.21980095.**
 
 ## Building from source
 
