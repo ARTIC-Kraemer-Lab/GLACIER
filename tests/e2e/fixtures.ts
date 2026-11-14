@@ -1,4 +1,5 @@
 import { test as base, Page, ElectronApplication, _electron as electron } from '@playwright/test';
+import { requireElectronBinary } from './electron-binary';
 
 async function dismissStartupDialog(page: Page) {
   await page.waitForLoadState();
@@ -17,6 +18,7 @@ export const test = base.extend<Fixtures>({
   page: async ({ browser, page }, use, testInfo) => {
     if (testInfo.project.name.includes('Electron')) {
       // Electron mode
+      requireElectronBinary(); // fails with an actionable message if not installed
 
       const electronApp: ElectronApplication = await electron.launch({
         args: ['.', '--fullscreen', '--no-sandbox']

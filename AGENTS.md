@@ -40,7 +40,7 @@ Electron + React (Vite/TS) desktop app for orchestrating bioinformatics workflow
 ## Testing
 
 - **Vitest** (unit): two project contexts — `backend` (node env, `tests/unit/**/*.test.js`) and `frontend` (jsdom env, `tests/unit/frontend/**/*.test.{js,ts,tsx}`). Run targeted: `npx vitest --project backend`. Backend setup (`tests/unit/backend/setup.js`) mocks `electron` + `electron-store`; frontend setup (`tests/setup.js`) mocks `react-i18next` / `i18next`. Docker tests need Docker running.
-- **Playwright** (E2E): `workers: 1`, sequential. Custom fixture in `tests/e2e/fixtures.ts` handles both Electron launch and web `page.goto('/')`, dismisses startup dialog. Projects: `Web (chromium)`, `Web (firefox)`, `Web (webkit)`, conditionally `Electron`. Web server auto-starts on `http://localhost:3030` via Playwright config. Test data in `tests/test-data/`. Run after `npm run build`.
+- **Playwright** (E2E): `workers: 1`, sequential. Custom fixture in `tests/e2e/fixtures.ts` handles both Electron launch and web `page.goto('/')`, dismisses startup dialog. Projects: `Web (chromium)`, `Web (firefox)`, `Web (webkit)`, and `Electron` (always run; CI installs the Electron binary with `node node_modules/electron/install.js`). Specs named `*.electron.spec.ts` are excluded from the Web projects. Web server auto-starts on `http://localhost:3030` via Playwright config. Test data in `tests/test-data/`. Run after `npm run build`.
 - **CI**: `GLACIER.yml` orchestrates `unit.yml` (ubuntu) → `e2e.yml` (ubuntu) → `e2e_wsl.yml` (windows-latest). E2E requires Java 21 (Temurin), Nextflow, Xvfb (Linux). WSL CI uses `scripts/wsl-setup.ps1`.
 
 ## Build & deploy quirks

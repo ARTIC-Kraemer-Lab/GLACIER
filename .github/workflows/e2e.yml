@@ -33,8 +33,14 @@ jobs:
         run: npm ci
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
-      - name: Ensure Electron binary
-        run: npm rebuild electron
+      # npm's allowScripts policy skips dependency lifecycle scripts, so the
+      # Electron binary is installed explicitly.
+      - name: Install Electron binary
+        run: node scripts/install-electron.mjs
+      - name: Verify Electron binary
+        shell: bash
+        run: |
+          node -e "const fs=require('fs'),path=require('path');const d='node_modules/electron';const t=path.join(d,'path.txt');if(!fs.existsSync(t))throw new Error('Electron path.txt missing at '+t);const b=path.join(d,'dist',fs.readFileSync(t,'utf8').trim());if(!fs.existsSync(b))throw new Error('Electron binary missing at '+b);console.log('Electron binary at '+b)"
       - name: Platform specific CI setup
         run: ./tests/e2e/ci-setup.sh
       - name: Build GLACIER
