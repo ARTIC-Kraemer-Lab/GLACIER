@@ -1,18 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isCI = !!process.env.CI;
 
-function hasElectron(): boolean {
-  const pathFile = path.join(__dirname, 'node_modules', 'electron', 'path.txt');
-  if (!fs.existsSync(pathFile)) return false;
-  const binName = fs.readFileSync(pathFile, 'utf-8').trim();
-  const binPath = path.join(__dirname, 'node_modules', 'electron', 'dist', binName);
-  return fs.existsSync(binPath);
-}
+// Specs that exercise the Electron main process. There is no main process in
+// web mode, so these are excluded from the Web projects and run only under the
+// Electron project.
+const electronOnlySpecs = '**/*.electron.spec.ts';
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -31,6 +24,7 @@ export default defineConfig({
   projects: [
     {
       name: 'Web (chromium)',
+      testIgnore: electronOnlySpecs,
       use: {
         browserName: 'chromium',
         baseURL: 'http://localhost:3030',
@@ -39,6 +33,7 @@ export default defineConfig({
     },
     {
       name: 'Web (firefox)',
+      testIgnore: electronOnlySpecs,
       use: {
         browserName: 'firefox',
         baseURL: 'http://localhost:3030',
@@ -47,23 +42,23 @@ export default defineConfig({
     },
     {
       name: 'Web (webkit)',
+      testIgnore: electronOnlySpecs,
       use: {
         browserName: 'webkit',
         baseURL: 'http://localhost:3030',
         ...devices['Desktop Safari']
       }
     },
-    ...(hasElectron()
-      ? [
-          {
-            name: 'Electron',
-            use: {
-              browserName: 'chromium',
-              ...devices['Desktop Chrome']
-            }
-          }
-        ]
-      : [])
+    {
+      // The desktop build is part of the product, so it is always tested. If the
+      // Electron binary is missing the fixture fails with an actionable message
+      // instead of the project being silently dropped from the run.
+      name: 'Electron',
+      use: {
+        browserName: 'chromium',
+        ...devices['Desktop Chrome']
+      }
+    }
   ],
   webServer: {
     // In CI the app has already been built by the preceding workflow step;

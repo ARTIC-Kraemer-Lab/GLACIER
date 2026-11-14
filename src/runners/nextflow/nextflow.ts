@@ -98,11 +98,16 @@ const get_electron_paths = async () => {
   if (is_electron) {
     const { app } = await import('electron');
 
-    // Resource paths
-    const resource_root = path.join(
-      app.isPackaged ? process.resourcesPath : app.getAppPath(),
-      'bundle'
-    );
+    // Resource paths. Guard against the app object being torn down mid-launch
+    // (e.g. quitting while a workflow is being started): accessing a destroyed
+    // Electron app throws "Object has been destroyed".
+    let app_path = process.resourcesPath;
+    try {
+      app_path = app.isPackaged ? process.resourcesPath : app.getAppPath();
+    } catch {
+      // Fall back to the packaged resources path
+    }
+    const resource_root = path.join(app_path, 'bundle');
     java_binary = path.join(
       resource_root,
       'jre',
@@ -112,7 +117,16 @@ const get_electron_paths = async () => {
     jar_file = path.join(resource_root, 'nextflow.jar');
 
     // Nextflow runtime environment
-    const userNextflowDir = path.join(app.getPath('userData'), 'nextflow');
+    let userNextflowDir = path.join(
+      process.env.HOME || process.env.USERPROFILE || '',
+      'GLACIER',
+      'nextflow'
+    );
+    try {
+      userNextflowDir = path.join(app.getPath('userData'), 'nextflow');
+    } catch {
+      // app is shutting down; fall back to the home directory
+    }
     try {
       fs_sync.mkdirSync(userNextflowDir, { recursive: true });
     } catch (e) {
