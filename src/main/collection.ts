@@ -46,6 +46,8 @@ import { parseNextflowLog } from '../runners/nextflow/nf-parse.js';
 //
 
 const instance_database_file = 'instances.json';
+/** How long a manual stop waits for the process (or container) to exit */
+const CANCEL_TIMEOUT_MS = 10_000;
 
 export interface Catalogue {
   name: string;
@@ -1134,7 +1136,10 @@ export class Collection {
     if (!local_instance) {
       throw new Error(`Instance ${instance.id} not found in collection.`);
     }
-    return await local_instance.getProgress();
+    const progress = await local_instance.getProgress();
+    // The stored status is authoritative for explicit cancellations, which a
+    // force-killed run never records in nextflow.log.
+    return { ...progress, instance_status: local_instance.status };
   }
 
   async getWorkflowInstanceParams(instance: IWorkflowInstance): Promise<IWorkflowParams> {
@@ -1338,7 +1343,36 @@ export class Collection {
     return true;
   }
 
-  async cancelWorkflowInstance(instance: IWorkflowInstance): Promise<void> {
+  /**
+   * Wait until none of the descriptors are alive, or the timeout elapses.
+   * Returns true when every process has exited.
+   */
+  private async waitForProcessesToExit(
+    descriptors: ProcessDescriptor[],
+    timeoutMs: number
+  ): Promise<boolean> {
+    const deadline = Date.now() + timeoutMs;
+    const pollMs = 250;
+    while (true) {
+      const alive: ProcessDescriptor[] = [];
+      for (const desc of descriptors) {
+        if (await this.verifyProcess(desc)) alive.push(desc);
+      }
+      if (alive.length === 0) return true;
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) return false;
+      await new Promise((resolve) => setTimeout(resolve, Math.min(pollMs, remaining)));
+    }
+  }
+
+  /**
+   * Ask the run to stop gracefully. Reports whether it actually exited: when it
+   * did not, the process descriptors are kept so the caller can force cancel it.
+   */
+  async cancelWorkflowInstance(
+    instance: IWorkflowInstance,
+    timeoutMs = CANCEL_TIMEOUT_MS
+  ): Promise<{ stopped: boolean }> {
     console.log(`Cancelling instance ${instance.id}`);
     const local_instance = this.workflow_instances.find((inst) => inst.id === instance.id);
     if (!local_instance) {
@@ -1363,7 +1397,12 @@ export class Collection {
         console.error(`Failed to stop process for instance ${instance.id}: ${err}`);
       }
     }
-    local_instance.processes = [];
+    const stopped = await this.waitForProcessesToExit(local_instance.processes, timeoutMs);
+    if (stopped) {
+      local_instance.processes = [];
+      this.recordRunWorkflow(local_instance, WorkflowStatus.Cancelled);
+    }
+    return { stopped };
   }
 
   async resetWorkflowInstanceStatus(instance: IWorkflowInstance): Promise<void> {
@@ -1385,7 +1424,14 @@ export class Collection {
     local_instance.setCachedProgress(null);
   }
 
-  async killWorkflowInstance(instance: IWorkflowInstance): Promise<void> {
+  /**
+   * Force the run to stop without letting Nextflow clean up. Reports whether it
+   * actually exited; descriptors are kept when it did not, so it can be retried.
+   */
+  async killWorkflowInstance(
+    instance: IWorkflowInstance,
+    timeoutMs = CANCEL_TIMEOUT_MS
+  ): Promise<{ stopped: boolean }> {
     console.log(`Killing instance ${instance.id}`);
     const local_instance = this.workflow_instances.find((inst) => inst.id === instance.id);
     if (!local_instance) {
@@ -1410,7 +1456,12 @@ export class Collection {
         console.error(`Failed to kill process for instance ${instance.id}: ${err}`);
       }
     }
-    local_instance.processes = [];
+    const stopped = await this.waitForProcessesToExit(local_instance.processes, timeoutMs);
+    if (stopped) {
+      local_instance.processes = [];
+      this.recordRunWorkflow(local_instance, WorkflowStatus.Cancelled);
+    }
+    return { stopped };
   }
 
   async deleteWorkflowInstance(instance: IWorkflowInstance): Promise<void> {

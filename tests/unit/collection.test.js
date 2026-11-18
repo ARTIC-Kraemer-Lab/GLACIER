@@ -368,11 +368,12 @@ describe('Collection', () => {
   });
 
   describe('cancelWorkflowInstance', () => {
-    it('kills each PID with graceful signal', async () => {
+    it('stops each PID gracefully and marks the instance cancelled', async () => {
       const killSpy = vi.spyOn(collection, 'killPID').mockReturnValue(true);
+      vi.spyOn(collection, 'verifyProcess').mockResolvedValue(false);
       const instance = {
         id: 'test',
-        name: '',
+        name: 'test',
         workflow_version: {},
         path: '',
         processes: [{ pid: 100 }, { pid: 200 }],
@@ -380,12 +381,34 @@ describe('Collection', () => {
       };
       collection.workflow_instances = [instance];
 
-      await collection.cancelWorkflowInstance(instance);
+      const result = await collection.cancelWorkflowInstance(instance, 50);
 
       expect(killSpy).toHaveBeenCalledTimes(2);
       expect(killSpy).toHaveBeenCalledWith(100, 'graceful');
       expect(killSpy).toHaveBeenCalledWith(200, 'graceful');
       expect(instance.processes).toEqual([]);
+      expect(instance.status).toBe('cancelled');
+      expect(result).toEqual({ stopped: true });
+    });
+
+    it('keeps the descriptors when the run does not stop', async () => {
+      vi.spyOn(collection, 'killPID').mockReturnValue(true);
+      vi.spyOn(collection, 'verifyProcess').mockResolvedValue(true);
+      const instance = {
+        id: 'test',
+        name: 'test',
+        workflow_version: {},
+        path: '',
+        processes: [{ pid: 100 }],
+        status: 'running'
+      };
+      collection.workflow_instances = [instance];
+
+      const result = await collection.cancelWorkflowInstance(instance, 50);
+
+      expect(result).toEqual({ stopped: false });
+      expect(instance.processes).toEqual([{ pid: 100 }]);
+      expect(instance.status).toBe('running');
     });
 
     it('throws for unknown instance', async () => {
@@ -410,11 +433,12 @@ describe('Collection', () => {
   });
 
   describe('killWorkflowInstance', () => {
-    it('kills each PID with kill signal', async () => {
+    it('force kills each PID and marks the instance cancelled', async () => {
       const killSpy = vi.spyOn(collection, 'killPID').mockReturnValue(true);
+      vi.spyOn(collection, 'verifyProcess').mockResolvedValue(false);
       const instance = {
         id: 'test',
-        name: '',
+        name: 'test',
         workflow_version: {},
         path: '',
         processes: [{ pid: 100 }],
@@ -422,10 +446,31 @@ describe('Collection', () => {
       };
       collection.workflow_instances = [instance];
 
-      await collection.killWorkflowInstance(instance);
+      const result = await collection.killWorkflowInstance(instance, 50);
 
       expect(killSpy).toHaveBeenCalledWith(100, 'kill');
       expect(instance.processes).toEqual([]);
+      expect(instance.status).toBe('cancelled');
+      expect(result).toEqual({ stopped: true });
+    });
+
+    it('keeps the descriptors when the process survives the force kill', async () => {
+      vi.spyOn(collection, 'killPID').mockReturnValue(true);
+      vi.spyOn(collection, 'verifyProcess').mockResolvedValue(true);
+      const instance = {
+        id: 'test',
+        name: 'test',
+        workflow_version: {},
+        path: '',
+        processes: [{ pid: 100 }],
+        status: 'running'
+      };
+      collection.workflow_instances = [instance];
+
+      const result = await collection.killWorkflowInstance(instance, 50);
+
+      expect(result).toEqual({ stopped: false });
+      expect(instance.status).toBe('running');
     });
   });
 
@@ -489,14 +534,18 @@ describe('Collection', () => {
   });
 
   describe('getInstanceProgress', () => {
-    it('delegates to instance.getProgress', async () => {
+    it('delegates to instance.getProgress and exposes the stored status', async () => {
       const progress = { workflow: [{ status: 'completed' }], group: [] };
-      const instance = { id: 'test', getProgress: vi.fn().mockResolvedValue(progress) };
+      const instance = {
+        id: 'test',
+        status: 'running',
+        getProgress: vi.fn().mockResolvedValue(progress)
+      };
       collection.workflow_instances = [instance];
 
       const result = await collection.getInstanceProgress(instance);
 
-      expect(result).toEqual(progress);
+      expect(result).toEqual({ ...progress, instance_status: 'running' });
     });
 
     it('throws for unknown instance', async () => {

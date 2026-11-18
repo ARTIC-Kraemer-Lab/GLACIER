@@ -283,6 +283,28 @@ describe('nf-parse', () => {
       expect(result.workflow[0].cause).toBe('Some error');
     });
 
+    it.each(['SIGINT', 'SIGTERM', 'SIGHUP'])(
+      'maps a %s abort to Cancelled rather than Failed',
+      async (signal) => {
+        const content = `2024-01-01 12:00:00.123 Session aborted -- Cause: ${signal}\n`;
+        const logPath = createLogFile(content);
+        const result = await parseNextflowLog(logPath);
+
+        expect(result.workflow).toHaveLength(1);
+        expect(result.workflow[0].status).toBe('cancelled');
+        expect(result.workflow[0].cause).toBe(signal);
+      }
+    );
+
+    it('does not treat causes that merely mention a signal as cancelled', async () => {
+      const content =
+        '2024-01-01 12:00:00.123 Session aborted -- Cause: Task failed after SIGTERM was ignored\n';
+      const logPath = createLogFile(content);
+      const result = await parseNextflowLog(logPath);
+
+      expect(result.workflow[0].status).toBe('failed');
+    });
+
     it('captures OOM cause from exit code 137', async () => {
       const content =
         "2024-01-01 12:00:00.123 Session aborted -- Cause: Process 'foo' terminated with exit code 137\n";

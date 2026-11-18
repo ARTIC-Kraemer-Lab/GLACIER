@@ -390,6 +390,11 @@ const formatDuration = (start?: string, end?: string): string => {
   }
 };
 
+const isTerminalStatus = (status: WorkflowStatus) =>
+  status === WorkflowStatus.Completed ||
+  status === WorkflowStatus.Failed ||
+  status === WorkflowStatus.Cancelled;
+
 const FormatWorkflowStatus = ({
   workflowStatus,
   isWorkflowRunning,
@@ -431,6 +436,9 @@ const FormatWorkflowStatus = ({
   } else if (workflowStatus === WorkflowStatus.Completed) {
     chipColor = 'success';
     progressColor = 'success';
+  } else if (workflowStatus === WorkflowStatus.Cancelled) {
+    chipColor = 'warning';
+    progressColor = 'warning';
   } else if (
     workflowStatus === WorkflowStatus.Running ||
     workflowStatus === WorkflowStatus.Undefined
@@ -443,7 +451,13 @@ const FormatWorkflowStatus = ({
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Chip label={chipLabel} color={chipColor} size="small" variant="filled" />
+          <Chip
+            id="workflow-status-chip"
+            label={chipLabel}
+            color={chipColor}
+            size="small"
+            variant="filled"
+          />
           {overallProgress > 0 && (
             <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
               {Math.round(overallProgress)}%
@@ -547,8 +561,7 @@ export default function ProgressTracker({
     return () => clearInterval(timer);
   }, [forceRender]);
 
-  const isWorkflowRunning =
-    workflowStatus !== WorkflowStatus.Completed && workflowStatus !== WorkflowStatus.Failed;
+  const isWorkflowRunning = !isTerminalStatus(workflowStatus);
 
   const processByFullNameRef = useRef(new Map<string, string>());
 
@@ -579,21 +592,22 @@ export default function ProgressTracker({
           }
           workflowStatus = s as WorkflowStatus;
         }
+        // An explicit cancellation is authoritative: a force-killed run leaves no
+        // abort entry in nextflow.log, so the stored status is the only signal.
+        if (
+          report?.instance_status === WorkflowStatus.Cancelled &&
+          workflowStatus !== WorkflowStatus.Completed
+        ) {
+          workflowStatus = WorkflowStatus.Cancelled;
+        }
         setWorkflowStatus(workflowStatus);
 
         // Notify parent once when workflow completes (triggers refreshInstancesList
         // so instance.last_update becomes available immediately)
-        if (
-          onRefresh &&
-          !notifiedCompletionRef.current &&
-          (workflowStatus === WorkflowStatus.Completed || workflowStatus === WorkflowStatus.Failed)
-        ) {
+        if (onRefresh && !notifiedCompletionRef.current && isTerminalStatus(workflowStatus)) {
           notifiedCompletionRef.current = true;
           onRefresh();
-        } else if (
-          workflowStatus !== WorkflowStatus.Completed &&
-          workflowStatus !== WorkflowStatus.Failed
-        ) {
+        } else if (!isTerminalStatus(workflowStatus)) {
           notifiedCompletionRef.current = false;
         }
 
@@ -611,8 +625,7 @@ export default function ProgressTracker({
         }
         setHintKey(hint);
 
-        const isRunning =
-          workflowStatus !== WorkflowStatus.Completed && workflowStatus !== WorkflowStatus.Failed;
+        const isRunning = !isTerminalStatus(workflowStatus);
 
         itemIdRef.current = 0;
         const newItems: any[] = [];

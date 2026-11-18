@@ -21,6 +21,7 @@ export enum WorkflowStatus {
   Completed = 'completed',
   Closed = 'closed',
   Failed = 'failed',
+  Cancelled = 'cancelled',
   Unknown = 'unknown',
   Undefined = 'undefined'
 }

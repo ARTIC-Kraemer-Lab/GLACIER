@@ -76,7 +76,12 @@ export default function MonitorPage({
 
   return (
     <Paper sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <HeaderMenu instance={instance} logMessage={logMessage} onRestart={onRestart} />
+      <HeaderMenu
+        instance={instance}
+        logMessage={logMessage}
+        onRestart={onRestart}
+        onRefresh={onRefresh}
+      />
       {bannerOpen && (
         <Alert severity="info" onClose={handleDismissBanner} sx={{ mx: 2, mt: 1 }}>
           {t('monitor.banner')}

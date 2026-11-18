@@ -4,23 +4,70 @@ import Button from '@mui/material/Button';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import { API } from '../../services/api.js';
+import { WorkflowStatus } from '../../../types/types.js';
 import { useTranslation } from 'react-i18next';
 
-export default function HeaderMenu({ instance, logMessage, onRestart }) {
+export default function HeaderMenu({ instance, logMessage, onRestart, onRefresh }) {
   const { t } = useTranslation();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  // Set when a graceful cancel did not stop the run; the menu entry then offers
+  // the force cancel fallback instead.
+  const [stopFailed, setStopFailed] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+
+  React.useEffect(() => {
+    setStopFailed(false);
+    setBusy(false);
+  }, [instance.id]);
 
   const handleExecutionActionsMenuClose = () => {
     setAnchorEl(null);
   };
 
-  const handleExecutionCancel = () => {
+  const handleExecutionCancel = async () => {
     handleExecutionActionsMenuClose();
     if (!window.confirm(t('monitor.execution.cancel-confirm'))) {
       return;
     }
     logMessage(`${t('monitor.execution.cancelling')}: ${instance.id}.`);
-    API.cancelWorkflowInstance(instance);
+    setBusy(true);
+    try {
+      const result = await API.cancelWorkflowInstance(instance);
+      if (!result.ok) {
+        logMessage(`Cancel failed: ${result.error.message}`);
+        setStopFailed(true);
+        return;
+      }
+      if (result.data?.stopped === false) {
+        setStopFailed(true);
+        logMessage(t('monitor.execution.cancel-unconfirmed'));
+        return;
+      }
+      setStopFailed(false);
+      if (onRefresh) onRefresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleExecutionForceCancel = async () => {
+    handleExecutionActionsMenuClose();
+    if (!window.confirm(t('monitor.execution.force-cancel-confirm'))) {
+      return;
+    }
+    logMessage(`${t('monitor.execution.force-cancelling')}: ${instance.id}.`);
+    setBusy(true);
+    try {
+      const result = await API.killWorkflowInstance(instance);
+      if (!result.ok) {
+        logMessage(`Force cancel failed: ${result.error.message}`);
+        return;
+      }
+      setStopFailed(false);
+      if (onRefresh) onRefresh();
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleExecutionResume = async () => {
@@ -33,30 +80,27 @@ export default function HeaderMenu({ instance, logMessage, onRestart }) {
       logMessage(`Resume failed: ${result.error.message}`);
       return;
     }
+    setStopFailed(false);
     logMessage(`${t('monitor.execution.resuming')}: ${instance.id}.`);
+    if (onRefresh) onRefresh();
   };
 
-  const handleExecutionRestart = () => {
+  const handleExecutionRestart = async () => {
     handleExecutionActionsMenuClose();
     if (!window.confirm(t('monitor.execution.restart-confirm'))) {
       return;
     }
-    logMessage(`${t('monitor.execution.restarting')}: ${instance.id}.`);
-    API.cancelWorkflowInstance(instance).then((result) => {
-      if (!result.ok) {
-        console.log('Error cancelling workflow (may not be running): ', result.error.message);
+    if (instance.status === WorkflowStatus.Running) {
+      const result = await API.cancelWorkflowInstance(instance);
+      if (!result.ok || result.data?.stopped === false) {
+        setStopFailed(true);
+        logMessage(t('monitor.execution.cancel-unconfirmed'));
+        return;
       }
-      if (onRestart) onRestart(instance.id);
-    });
-  };
-
-  const handleExecutionKill = () => {
-    handleExecutionActionsMenuClose();
-    if (!window.confirm(t('monitor.execution.kill-confirm'))) {
-      return;
     }
-    logMessage(`${t('monitor.execution.killing')}: ${instance.id}.`);
-    API.killWorkflowInstance(instance);
+    logMessage(`${t('monitor.execution.restarting')}: ${instance.id}.`);
+    setStopFailed(false);
+    if (onRestart) onRestart(instance.id);
   };
 
   const handleOpenResultsFolder = () => {
@@ -84,17 +128,25 @@ export default function HeaderMenu({ instance, logMessage, onRestart }) {
         anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
-        <MenuItem value={0} onClick={() => handleExecutionCancel()}>
-          {t('monitor.execution.cancel')}
-        </MenuItem>
-        <MenuItem value={1} onClick={() => handleExecutionResume()}>
+        {instance.status === WorkflowStatus.Running &&
+          (stopFailed ? (
+            <MenuItem
+              id="execution-force-cancel"
+              disabled={busy}
+              onClick={() => handleExecutionForceCancel()}
+            >
+              {t('monitor.execution.force-cancel')}
+            </MenuItem>
+          ) : (
+            <MenuItem id="execution-cancel" disabled={busy} onClick={() => handleExecutionCancel()}>
+              {t('monitor.execution.cancel')}
+            </MenuItem>
+          ))}
+        <MenuItem id="execution-resume" disabled={busy} onClick={() => handleExecutionResume()}>
           {t('monitor.execution.resume')}
         </MenuItem>
-        <MenuItem value={2} onClick={() => handleExecutionRestart()}>
+        <MenuItem id="execution-restart" disabled={busy} onClick={() => handleExecutionRestart()}>
           {t('monitor.execution.restart')}
-        </MenuItem>
-        <MenuItem value={3} onClick={() => handleExecutionKill()}>
-          {t('monitor.execution.kill')}
         </MenuItem>
       </Menu>
 
@@ -105,7 +157,7 @@ export default function HeaderMenu({ instance, logMessage, onRestart }) {
           px: 2
         }}
       >
-        <Typography variant="h6" sx={{ textAlign: 'center' }}>
+        <Typography variant="h6" sx={{ textAlign: 'center' }} data-testid="instance-name">
           {instance.name}
         </Typography>
         <Typography variant="subtitle1" sx={{ textAlign: 'center' }}>

@@ -35,6 +35,11 @@ const RES = [
 
 const DEBUG = process.env.DEBUG === '1';
 
+// A run aborted by a termination signal was stopped deliberately (GLACIER's
+// Cancel action, Ctrl+C, or an OS/container stop) rather than failing.
+const CANCELLATION_CAUSE = /^SIG(INT|TERM|HUP)$/i;
+const isCancellationCause = (cause: string) => CANCELLATION_CAUSE.test(cause.trim());
+
 export async function readNextflowLog(logFilePath: string) {
   const root_path = path.dirname(logFilePath);
   const rl = readline.createInterface({
@@ -222,7 +227,11 @@ export async function readNextflowLog(logFilePath: string) {
           break;
         }
         case 'aborted':
-          progress['workflow'].push({ time: ts, status: WorkflowStatus.Failed, cause: m[1] });
+          progress['workflow'].push({
+            time: ts,
+            status: isCancellationCause(m[1]) ? WorkflowStatus.Cancelled : WorkflowStatus.Failed,
+            cause: m[1]
+          });
           break;
         case 'config_error':
           progress['workflow'].push({
