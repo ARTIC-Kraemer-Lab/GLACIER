@@ -1082,10 +1082,11 @@ export class Collection {
   }
 
   /** Write parameters atomically so concurrent readers never see partial JSON. */
-  private writeParamsFile(filename: string, params: IWorkflowParams): void {
-    const writeResult = safeFs.writeFileAtomicSync(filename, JSON.stringify(params, null, 2));
-    if (!writeResult.ok) {
-      throw new Error(`Failed to write instance parameters: ${writeResult.error.message}`);
+  private async writeParamsFile(filename: string, params: IWorkflowParams): Promise<void> {
+    try {
+      await safeFs.writeFileAtomic(filename, JSON.stringify(params, null, 2));
+    } catch (err: any) {
+      throw new Error(`Failed to write instance parameters: ${err?.message ?? 'Unknown error'}`);
     }
   }
 
@@ -1164,7 +1165,7 @@ export class Collection {
       Object.assign(params, managed);
     }
     if (Object.keys(params).length > 0) {
-      this.writeParamsFile(path.join(instance_path, 'glacier-params.json'), params);
+      await this.writeParamsFile(path.join(instance_path, 'glacier-params.json'), params);
     }
 
     const instance = new WorkflowInstance({
@@ -1191,7 +1192,7 @@ export class Collection {
       throw new Error(`Instance ${instance.id} not found in collection.`);
     }
     const filename = path.join(local_instance.path, 'glacier-params.json');
-    this.writeParamsFile(filename, params);
+    await this.writeParamsFile(filename, params);
     local_instance.params = params;
     return params;
   }

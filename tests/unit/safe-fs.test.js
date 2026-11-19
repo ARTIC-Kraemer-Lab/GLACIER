@@ -3,7 +3,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import { writeFileAtomic, writeFileAtomicSync } from '../../src/main/safe-fs.js';
+import { writeFileAtomic } from '../../src/main/safe-fs.js';
 
 let tmpDir;
 
@@ -14,40 +14,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   fs.rmSync(tmpDir, { recursive: true, force: true });
-});
-
-describe('writeFileAtomicSync', () => {
-  it('writes the file and leaves no temp files behind', () => {
-    const target = path.join(tmpDir, 'params.json');
-
-    const result = writeFileAtomicSync(target, JSON.stringify({ a: 1 }));
-
-    expect(result.ok).toBe(true);
-    expect(JSON.parse(fs.readFileSync(target, 'utf8'))).toEqual({ a: 1 });
-    expect(fs.readdirSync(tmpDir)).toEqual(['params.json']);
-  });
-
-  it('reports write failures and leaves no temp files behind', () => {
-    const target = path.join(tmpDir, 'missing', 'params.json');
-
-    const result = writeFileAtomicSync(target, '{}');
-
-    expect(result.ok).toBe(false);
-    expect(fs.readdirSync(tmpDir)).toEqual([]);
-  });
-
-  it('removes the temp file when the rename fails', () => {
-    const target = path.join(tmpDir, 'params.json');
-    vi.spyOn(fs, 'renameSync').mockImplementation(() => {
-      throw new Error('denied');
-    });
-
-    const result = writeFileAtomicSync(target, '{}');
-
-    expect(result.ok).toBe(false);
-    expect(fs.existsSync(target)).toBe(false);
-    expect(fs.readdirSync(tmpDir)).toEqual([]);
-  });
 });
 
 describe('writeFileAtomic', () => {
@@ -68,8 +34,8 @@ describe('writeFileAtomic', () => {
     );
 
     // Whichever write landed last, the file must be complete and the directory
-    // free of temp files. A shared temp path makes some renames fail with
-    // ENOENT (seen on Windows CI when a launch overlaps an autosave).
+    // free of temp files. Concurrent renames onto one destination are not safe
+    // on Windows (EPERM), so writes are serialised per file.
     expect(JSON.parse(fs.readFileSync(target, 'utf8'))).toHaveProperty('i');
     expect(fs.readdirSync(tmpDir)).toEqual(['params.json']);
   });
@@ -85,19 +51,17 @@ describe('writeFileAtomic', () => {
 
     expect(renameSpy).toHaveBeenCalledTimes(3);
     expect(JSON.parse(fs.readFileSync(target, 'utf8'))).toEqual({ a: 1 });
-    renameSpy.mockRestore();
   });
 
   it('cleans up the temp file when renaming fails permanently', async () => {
     const target = path.join(tmpDir, 'params.json');
-    const renameSpy = vi
-      .spyOn(fs.promises, 'rename')
-      .mockRejectedValue(Object.assign(new Error('denied'), { code: 'EPERM' }));
+    vi.spyOn(fs.promises, 'rename').mockRejectedValue(
+      Object.assign(new Error('denied'), { code: 'EPERM' })
+    );
 
     await expect(writeFileAtomic(target, '{}')).rejects.toThrow('denied');
 
     expect(fs.existsSync(target)).toBe(false);
     expect(fs.readdirSync(tmpDir)).toEqual([]);
-    renameSpy.mockRestore();
   });
 });

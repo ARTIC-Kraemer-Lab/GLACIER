@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 
 export interface SafeSuccess<T> {
   ok: true;
@@ -53,37 +54,24 @@ function tempFilePath(file: string): string {
   return `${file}.${process.pid}.${Date.now()}.${tempFileCounter}.tmp`;
 }
 
-/** Write a file atomically: write to a unique temp file, then rename. */
-export function writeFileAtomicSync(
-  file: string,
-  data: string,
-  options?: fs.WriteFileOptions
-): SafeResult<void> {
-  const tmp = tempFilePath(file);
-  const writeResult = writeFileSync(tmp, data, options);
-  if (!writeResult.ok) {
-    rmSync(tmp, { force: true });
-    return writeResult;
-  }
-  const renameResult = renameSync(tmp, file);
-  if (!renameResult.ok) {
-    rmSync(tmp, { force: true });
-    return renameResult;
-  }
-  return { ok: true, data: undefined };
-}
-
-const RENAME_RETRIES = 3;
-const RENAME_RETRY_DELAY_MS = 25;
+const RENAME_RETRIES = 5;
+const RENAME_RETRY_DELAY_MS = 50;
 
 /**
- * Async variant of writeFileAtomicSync. Windows can briefly refuse the rename
- * while another process has the destination open, so retry EPERM/EBUSY.
+ * Per-destination write queues. Concurrent renames onto the same destination
+ * are not safe on Windows (EPERM), so writes to a given file are serialised.
  */
-export async function writeFileAtomic(
+const writeQueues = new Map<string, Promise<void>>();
+
+function queueKey(file: string): string {
+  const resolved = path.resolve(file);
+  return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+}
+
+async function writeAtomicOnce(
   file: string,
   data: string,
-  encoding: BufferEncoding = 'utf8'
+  encoding: BufferEncoding
 ): Promise<void> {
   const tmp = tempFilePath(file);
   try {
@@ -95,6 +83,8 @@ export async function writeFileAtomic(
         return;
       } catch (err: any) {
         lastError = err;
+        // Windows can briefly refuse the rename while another process has the
+        // destination open; retry those codes only.
         if (err?.code !== 'EPERM' && err?.code !== 'EBUSY') throw err;
         await new Promise((resolve) => setTimeout(resolve, RENAME_RETRY_DELAY_MS));
       }
@@ -104,6 +94,26 @@ export async function writeFileAtomic(
     await fs.promises.rm(tmp, { force: true }).catch(() => {});
     throw err;
   }
+}
+
+/**
+ * Write a file atomically: write to a unique temp file, then rename. Writes to
+ * the same destination are serialised so they cannot rename over each other.
+ */
+export function writeFileAtomic(
+  file: string,
+  data: string,
+  encoding: BufferEncoding = 'utf8'
+): Promise<void> {
+  const key = queueKey(file);
+  const previous = writeQueues.get(key) ?? Promise.resolve();
+  const run = previous.catch(() => undefined).then(() => writeAtomicOnce(file, data, encoding));
+  const settled = run.catch(() => undefined);
+  writeQueues.set(key, settled);
+  void settled.then(() => {
+    if (writeQueues.get(key) === settled) writeQueues.delete(key);
+  });
+  return run;
 }
 
 export function statSync(path: string): SafeResult<fs.Stats> {
