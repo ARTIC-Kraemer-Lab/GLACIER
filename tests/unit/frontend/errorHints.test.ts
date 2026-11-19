@@ -123,6 +123,24 @@ describe('findErrorHint', () => {
       expect(findErrorHint('EACCES: cannot open file')).toBe('monitor.progress.hint-permission');
     });
 
+    it('detects "EPERM"', () => {
+      expect(findErrorHint("EPERM: operation not permitted, open '/tmp/work/.command.sh'")).toBe(
+        'monitor.progress.hint-permission'
+      );
+    });
+
+    it('detects Python "PermissionError"', () => {
+      expect(
+        findErrorHint("PermissionError: [Errno 1] Operation not permitted: 'ebola-bdbv_nuc.fasta'")
+      ).toBe('monitor.progress.hint-permission');
+    });
+
+    it('detects "[Errno 1] operation not permitted"', () => {
+      expect(
+        findErrorHint("[Errno 1] Operation not permitted: '/Users/me/Downloads/in.fasta'")
+      ).toBe('monitor.progress.hint-permission');
+    });
+
     it('detects "access denied"', () => {
       expect(findErrorHint('Access denied to resource')).toBe('monitor.progress.hint-permission');
     });
