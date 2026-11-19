@@ -45,7 +45,11 @@ export const ERROR_HINTS: ErrorHintEntry[] = [
     patterns: [
       /permission\s*denied/i,
       /PermissionDenied/,
+      /PermissionError/,
       /EACCES/,
+      /EPERM/,
+      /\[Errno\s+1\]/,
+      /operation\s+not\s+permitted/i,
       /access\s*denied/i,
       /not executable/i
     ],
