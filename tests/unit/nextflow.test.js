@@ -685,6 +685,9 @@ describe('nextflow', () => {
       origPlatformDarwin = Object.getOwnPropertyDescriptor(process, 'platform');
       Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
       vi.resetModules();
+      // Parameters are written atomically (tmp file + rename); these tests mock
+      // writeFile, so the rename has nothing real to move.
+      vi.spyOn(fs.promises, 'rename').mockResolvedValue(undefined);
       const mod = await import('../../src/runners/nextflow/nextflow.js');
       paramsRunWorkflow = mod.runWorkflow;
     });
@@ -846,6 +849,9 @@ describe('nextflow', () => {
       origPlatformDarwin = Object.getOwnPropertyDescriptor(process, 'platform');
       Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
       vi.resetModules();
+      // Parameters are written atomically (tmp file + rename); tests that mock
+      // writeFile have nothing real to move.
+      vi.spyOn(fs.promises, 'rename').mockResolvedValue(undefined);
       const mod = await import('../../src/runners/nextflow/nextflow.js');
       profileRunWorkflow = mod.runWorkflow;
     });

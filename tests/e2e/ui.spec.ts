@@ -30,7 +30,9 @@ async function waitForLogLine(page: Page, text: string | RegExp, timeout = 60000
 }
 
 /** Point GLACIER at the local test collections and a fresh documents folder. */
-async function setupLocalCollections(page: Page): Promise<{ collectionsPath: string }> {
+async function setupLocalCollections(
+  page: Page
+): Promise<{ collectionsPath: string; docsPath: string }> {
   const collectionsPath = path.resolve(path.join(__dirname, '..', 'test-data'));
   await page.click('#sidebar-settings-button');
   await page.click('#settings-general-panel');
@@ -48,7 +50,7 @@ async function setupLocalCollections(page: Page): Promise<{ collectionsPath: str
   await expect(page.locator('#setup-documents-folder')).toHaveValue(docsPath);
   await page.click('#setup-continue-button');
   await expect(dialog).toBeHidden({ timeout: TIMEOUT_30s });
-  return { collectionsPath };
+  return { collectionsPath, docsPath };
 }
 
 test('show title', async ({ page }) => {
@@ -288,6 +290,70 @@ test('parameters are reachable from the tab panel', async ({ page }) => {
   await page.getByRole('button', { name: 'Launch Workflow' }).click();
   await expect(page.locator('#parameters-params-tab')).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByLabel('Sleep Time')).toHaveValue('-1');
+});
+
+test('browsing a workflow leaves no empty instance behind', async ({ page }) => {
+  const { docsPath } = await setupLocalCollections(page);
+  const workflowInstancesDir = path.join(docsPath, 'instances', 'glacier', 'sleep@main');
+  const listInstances = () => {
+    try {
+      return fs
+        .readdirSync(workflowInstancesDir)
+        .filter((name) => fs.statSync(path.join(workflowInstancesDir, name)).isDirectory());
+    } catch {
+      return [];
+    }
+  };
+  const readParams = () => {
+    try {
+      const [name] = listInstances();
+      if (!name) return undefined;
+      const paramsFile = path.join(workflowInstancesDir, name, 'glacier-params.json');
+      if (!fs.existsSync(paramsFile)) return undefined;
+      return JSON.parse(fs.readFileSync(paramsFile, 'utf8'));
+    } catch {
+      return undefined;
+    }
+  };
+
+  // Opening the workflow shows the Parameters page without writing anything
+  await page.click('#sidebar-library-button');
+  await page.click(`#card-${cssEscape('sleep')}`);
+  await expect(page.getByRole('button', { name: 'Launch Workflow' })).toBeVisible({
+    timeout: TIMEOUT_10s
+  });
+  await page.waitForTimeout(1500);
+  expect(listInstances()).toHaveLength(0);
+
+  // Editing a parameter materialises the instance and autosaves the value.
+  // Type slowly enough that materialisation happens between keystrokes: it
+  // must not remount the page, move focus or switch back to the Description tab.
+  await page.click('#parameters-params-tab');
+  const sleepTime = page.getByLabel('Sleep Time');
+  await sleepTime.fill('');
+  await sleepTime.pressSequentially('123', { delay: 600 });
+
+  await expect(page.locator('#parameters-params-tab')).toHaveAttribute('aria-selected', 'true');
+  await expect(sleepTime).toBeFocused();
+  await expect(sleepTime).toHaveValue('123');
+
+  await expect.poll(() => listInstances().length, { timeout: TIMEOUT_10s }).toBe(1);
+  await expect.poll(() => readParams()?.sleep_time, { timeout: TIMEOUT_10s }).toBe(123);
+
+  // An edit made just before navigating away is flushed rather than lost
+  await sleepTime.fill('');
+  await sleepTime.pressSequentially('456');
+  await page.click('#sidebar-library-button');
+  await expect.poll(() => readParams()?.sleep_time, { timeout: TIMEOUT_10s }).toBe(456);
+  expect(listInstances()).toHaveLength(1);
+
+  // A created but never-launched instance has no launch time
+  await page.click('#sidebar-instances-button');
+  await page
+    .getByTestId(/^instance-status-/)
+    .first()
+    .click();
+  await expect(page.getByTestId('instance-launch-time')).toHaveText('-');
 });
 
 test('renders Mermaid diagrams in the workflow description', async ({ page }) => {

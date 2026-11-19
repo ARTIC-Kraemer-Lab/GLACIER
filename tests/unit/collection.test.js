@@ -41,6 +41,7 @@ vi.mock('../../src/main/paths.js', () => ({
   getDocumentsPath: vi.fn(() => '/tmp/documents/GLACIER'),
   getCollectionsPath: vi.fn(),
   getOutputPath: vi.fn(() => '/tmp/output/GLACIER'),
+  getStoreDirPath: vi.fn(() => '/tmp/store/GLACIER'),
   locateReports: vi.fn(() => [])
 }));
 
@@ -319,6 +320,178 @@ describe('Collection', () => {
       // outdir should be overridden by the auto-resolved output path
       expect(params.outdir).not.toBe('./results');
       expect(params.outdir).toContain('output');
+    });
+
+    it('reuses a name reserved by a draft and keeps its parameters', async () => {
+      collection.documents_root_path = tmpDir;
+      collection.workflows = [makeWorkflow()];
+      vi.mocked(repo.getWorkflowSchema).mockResolvedValue({});
+
+      const prepared = await collection.prepareWorkflowInstance('owner/repo', 'v1.0');
+      const instance = await collection.createWorkflowInstance('owner/repo', 'v1.0', {
+        name: prepared.instance.name,
+        params: { max_cpus: 6 }
+      });
+
+      expect(instance.name).toBe(prepared.instance.name);
+      const paramsFile = path.join(instance.path, 'glacier-params.json');
+      expect(JSON.parse(fs.readFileSync(paramsFile, 'utf8'))).toEqual({ max_cpus: 6 });
+    });
+  });
+
+  describe('prepareWorkflowInstance', () => {
+    it('returns catalogue defaults without creating anything on disk', async () => {
+      collection.documents_root_path = tmpDir;
+      collection.workflows = [makeWorkflow()];
+      collection.catalogues = [
+        makeCatalogue({
+          sections: [
+            {
+              name: 'My Workflows',
+              workflows: [{ name: 'my-workflow', repo: 'owner/repo', parameters: { max_cpus: 4 } }]
+            }
+          ]
+        })
+      ];
+      vi.mocked(repo.generateUniqueName).mockReturnValue('draft-otter');
+      vi.mocked(repo.getWorkflowSchema).mockResolvedValue({});
+
+      const prepared = await collection.prepareWorkflowInstance('owner/repo', 'v1.0');
+
+      expect(prepared.instance.draft).toBe(true);
+      expect(prepared.instance.name).toBe('draft-otter');
+      expect(prepared.instance.workflow_version.version).toBe('v1.0');
+      expect(prepared.params).toEqual({ max_cpus: 4 });
+      expect(prepared.workflow_id).toBe('owner/repo');
+      expect(prepared.version).toBe('v1.0');
+      expect(fs.existsSync(prepared.instance.path)).toBe(false);
+      expect(collection.workflow_instances).toHaveLength(0);
+    });
+
+    it('does not create the auto outdir until the instance is materialised', async () => {
+      collection.documents_root_path = tmpDir;
+      collection.workflows = [makeWorkflow()];
+      collection.settingsSet('autoOutdir', true);
+      vi.mocked(repo.generateUniqueName).mockReturnValue('draft-otter');
+      vi.mocked(repo.getWorkflowSchema).mockResolvedValue({
+        properties: { outdir: { type: 'string', format: 'directory-path' } }
+      });
+
+      const prepared = await collection.prepareWorkflowInstance('owner/repo', 'v1.0');
+
+      expect(prepared.params.outdir).toContain('output');
+      expect(fs.existsSync(prepared.params.outdir)).toBe(false);
+    });
+
+    it('throws for unknown workflow', async () => {
+      await expect(collection.prepareWorkflowInstance('unknown/repo', 'v1.0')).rejects.toThrow(
+        'not found'
+      );
+    });
+
+    it('throws for an unknown version', async () => {
+      collection.workflows = [makeWorkflow()];
+      await expect(collection.prepareWorkflowInstance('owner/repo', 'v9.9')).rejects.toThrow(
+        'no version v9.9'
+      );
+    });
+  });
+
+  describe('saveWorkflowInstanceParams', () => {
+    it('writes parameters for a materialised instance', async () => {
+      collection.documents_root_path = tmpDir;
+      collection.workflows = [makeWorkflow()];
+      vi.mocked(repo.generateUniqueName).mockReturnValue('calm-otter');
+      vi.mocked(repo.getWorkflowSchema).mockResolvedValue({});
+      const instance = await collection.createWorkflowInstance('owner/repo', 'v1.0');
+
+      await collection.saveWorkflowInstanceParams(instance, { max_cpus: 8 });
+
+      const paramsFile = path.join(instance.path, 'glacier-params.json');
+      expect(JSON.parse(fs.readFileSync(paramsFile, 'utf8'))).toEqual({ max_cpus: 8 });
+      expect(instance.params).toEqual({ max_cpus: 8 });
+    });
+
+    it('rejects drafts', async () => {
+      await expect(
+        collection.saveWorkflowInstanceParams({ id: 'draft', draft: true }, {})
+      ).rejects.toThrow('unmaterialised');
+    });
+
+    it('throws for unknown instances', async () => {
+      await expect(collection.saveWorkflowInstanceParams({ id: 'missing' }, {})).rejects.toThrow(
+        'not found'
+      );
+    });
+  });
+
+  describe('draft instance getters', () => {
+    const makeDraft = (params = {}) => ({
+      id: '__draft__',
+      draft: true,
+      params,
+      workflow_version: makeWorkflow().versions[0]
+    });
+
+    it('returns the draft parameters from memory', async () => {
+      await expect(
+        collection.getWorkflowInstanceParams(makeDraft({ max_cpus: 2 }))
+      ).resolves.toEqual({ max_cpus: 2 });
+    });
+
+    it('returns no stored profile for a draft', async () => {
+      await expect(collection.getWorkflowInstanceProfile(makeDraft())).resolves.toBeNull();
+    });
+
+    it('reads profiles from the workflow for a draft', async () => {
+      vi.mocked(getAvailableProfiles).mockResolvedValue(['standard', 'test']);
+      const draft = makeDraft();
+      await expect(collection.getAvailableProfiles(draft)).resolves.toEqual(['standard', 'test']);
+      expect(getAvailableProfiles).toHaveBeenCalledWith(draft);
+    });
+  });
+
+  describe('getLaunchTime', () => {
+    let instance;
+
+    beforeEach(async () => {
+      collection.documents_root_path = tmpDir;
+      collection.workflows = [makeWorkflow()];
+      vi.mocked(repo.generateUniqueName).mockReturnValue('launch-otter');
+      vi.mocked(repo.getWorkflowSchema).mockResolvedValue({});
+      instance = await collection.createWorkflowInstance('owner/repo', 'v1.0');
+    });
+
+    const dbWith = (runs) => ({ runs: [{ id: instance.id, runs }] });
+
+    it('does not report the initial created record as a launch time', () => {
+      const db = dbWith([
+        { datetime: '2026-01-01T10:00:00Z', status: 'created', pids: [], processes: [] }
+      ]);
+      expect(instance.getLaunchTime(db)).toBeUndefined();
+    });
+
+    it('reports the first launch', () => {
+      const db = dbWith([
+        { datetime: '2026-01-01T10:00:00Z', status: 'created', pids: [], processes: [] },
+        { datetime: '2026-01-02T09:00:00Z', status: 'running', pids: [123], processes: [] },
+        { datetime: '2026-01-02T10:00:00Z', status: 'completed', pids: [], processes: [] }
+      ]);
+      expect(instance.getLaunchTime(db)).toBe('2026-01-02T09:00:00Z');
+    });
+
+    it('treats legacy records without a status as launches', () => {
+      const db = dbWith([{ datetime: '2025-12-31T08:00:00Z', pids: [42] }]);
+      expect(instance.getLaunchTime(db)).toBe('2025-12-31T08:00:00Z');
+    });
+
+    it('returns undefined when the instance has no records', () => {
+      expect(instance.getLaunchTime(undefined)).toBeUndefined();
+      expect(instance.getLaunchTime({ runs: [] })).toBeUndefined();
+      expect(
+        instance.getLaunchTime({ runs: [{ id: 'other', runs: [{ status: 'running' }] }] })
+      ).toBeUndefined();
+      expect(instance.getLaunchTime(dbWith([]))).toBeUndefined();
     });
   });
 

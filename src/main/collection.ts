@@ -166,6 +166,8 @@ export interface IWorkflowInstance {
   launch_time?: string;
   last_update?: string;
   hidden?: boolean;
+  /** True for an in-memory instance that has not been written to disk yet */
+  draft?: boolean;
 }
 
 class WorkflowInstance implements IWorkflowInstance {
@@ -179,6 +181,7 @@ class WorkflowInstance implements IWorkflowInstance {
   launch_time?: string;
   last_update?: string;
   hidden?: boolean;
+  draft?: boolean;
 
   processes: ProcessDescriptor[] = [];
 
@@ -189,7 +192,8 @@ class WorkflowInstance implements IWorkflowInstance {
     path,
     status = 'created',
     params = {},
-    hidden
+    hidden,
+    draft
   }: IWorkflowInstance) {
     this.id = id;
     this.name = name;
@@ -198,6 +202,7 @@ class WorkflowInstance implements IWorkflowInstance {
     this.params = params;
     this.status = status;
     this.hidden = hidden;
+    this.draft = draft;
   }
 
   attachProcess(desc: ProcessDescriptor) {
@@ -251,8 +256,11 @@ class WorkflowInstance implements IWorkflowInstance {
     if (!instanceDb?.runs) return undefined;
     const run = instanceDb.runs.find((r: any) => r.id === this.id);
     if (!run?.runs?.length) return undefined;
-    const launch = run.runs.find((e: any) => e.status === 'running');
-    return launch?.datetime || run.runs[0].datetime || undefined;
+    // The initial 'created' record is not a launch. Legacy databases have no
+    // status field on run entries, so anything not explicitly 'created' is
+    // treated as a launch.
+    const launch = run.runs.find((e: any) => e.status !== 'created');
+    return launch?.datetime || undefined;
   }
 
   getLastUpdateTime(): string | undefined {
@@ -997,7 +1005,11 @@ export class Collection {
     settings.set('storeDirPath', path);
   }
 
-  async createWorkflowInstance(workflow_id: string, version: string): Promise<IWorkflowInstance> {
+  /** Resolve a workflow/version pair, throwing when either cannot be found. */
+  private resolveWorkflowVersion(
+    workflow_id: string,
+    version: string
+  ): { workflow: Workflow; workflow_version: WorkflowVersion } {
     const { owner, repo } = parseRepoUrl(workflow_id);
     const workflow = this.workflows.find((wf) => wf.id === `${owner}/${repo}`);
     if (!workflow) {
@@ -1006,70 +1018,159 @@ export class Collection {
     if (!workflow.versions || workflow.versions.length === 0) {
       throw new Error(`Workflow ${workflow_id} has no versions.`);
     }
-    let workflow_version;
+    let workflow_version: WorkflowVersion | undefined;
     if (version === undefined || version === 'latest') {
       workflow_version =
         workflow.versions.find((v) => v.sourceVersion === 'latest') || workflow.versions[0];
     } else {
-      workflow_version = workflow.versions.filter((v: any) => v.version === version)[0];
+      workflow_version = workflow.versions.find((v) => v.version === version);
     }
-    const repo_and_version = `${workflow.repo}@${workflow_version.version}`;
-    const existing_ids = this.workflow_instances.map((inst) => inst.id);
-    const instance_name = generateUniqueName(existing_ids);
-    const instance_id = instance_name;
-    const instance_path = path.join(this.instances_path, owner, repo_and_version, instance_name);
-    this.ensurePathExists(instance_path);
+    if (!workflow_version) {
+      throw new Error(`Workflow ${workflow_id} has no version ${version}.`);
+    }
+    return { workflow, workflow_version };
+  }
 
-    // Apply catalogue default parameters if specified
-    let catalogueParams: Record<string, any> = {};
+  /**
+   * Parameters a new instance starts with: catalogue defaults plus the
+   * app-managed store_dir/outdir values derived from the workflow schema.
+   * `managed` is returned separately so it can be re-applied over caller
+   * parameters when a draft is materialised.
+   */
+  private async buildDefaultParams(
+    workflow_id: string,
+    workflow: Workflow,
+    workflow_version: WorkflowVersion,
+    instance_name: string,
+    createDirs: boolean
+  ): Promise<{ defaults: Record<string, any>; managed: Record<string, any> }> {
+    const defaults: Record<string, any> = {};
     for (const cat of this.catalogues) {
       for (const section of cat.sections) {
         const wf = section.workflows.find((w: any) => w.repo === workflow_id);
         if (wf?.parameters) {
-          catalogueParams = { ...wf.parameters };
+          Object.assign(defaults, wf.parameters);
           break;
         }
       }
-      if (Object.keys(catalogueParams).length > 0) break;
-    }
-    if (Object.keys(catalogueParams).length > 0) {
-      const paramsFile = path.join(instance_path, 'glacier-params.json');
-      safeFs.writeFileSync(paramsFile, JSON.stringify(catalogueParams, null, 2));
+      if (Object.keys(defaults).length > 0) break;
     }
 
-    // Auto-set store_dir and outdir if enabled (overlay on catalogue defaults)
+    const managed: Record<string, any> = {};
     if (this.settingsGet('autoStoreDir') || this.settingsGet('autoOutdir')) {
       const schema = await getWorkflowSchema(workflow_version.path);
-      const paramsFile = path.join(instance_path, 'glacier-params.json');
-      let existingParams: Record<string, any> = {};
-      if (safeFs.existsSync(paramsFile)) {
-        const readResult = safeFs.readFileSync(paramsFile);
-        if (readResult.ok && readResult.data) {
-          try {
-            existingParams = JSON.parse(readResult.data);
-          } catch {}
-        }
-      }
-      const params: Record<string, string> = { ...existingParams };
+      const { owner } = parseRepoUrl(workflow_id);
+      const repo_and_version = `${workflow.repo}@${workflow_version.version}`;
       if (this.settingsGet('autoStoreDir')) {
         const storeDirKey = findStoreDirKey(schema);
         if (storeDirKey) {
           const storeDirPath = getStoreDirPath();
-          params[storeDirKey] = storeDirPath;
-          safeFs.mkdirSync(storeDirPath, { recursive: true });
+          managed[storeDirKey] = storeDirPath;
+          if (createDirs) safeFs.mkdirSync(storeDirPath, { recursive: true });
         }
       }
       if (this.settingsGet('autoOutdir')) {
         const outdirKey = findOutdirKey(schema);
         if (outdirKey) {
           const outputDir = path.join(getOutputPath(), owner, repo_and_version, instance_name);
-          params[outdirKey] = outputDir;
-          safeFs.mkdirSync(outputDir, { recursive: true });
+          managed[outdirKey] = outputDir;
+          if (createDirs) safeFs.mkdirSync(outputDir, { recursive: true });
         }
       }
-      if (Object.keys(params).length > 0) {
-        safeFs.writeFileSync(paramsFile, JSON.stringify(params, null, 2));
-      }
+    }
+    return { defaults, managed };
+  }
+
+  /** Write parameters atomically so concurrent readers never see partial JSON. */
+  private writeParamsFile(filename: string, params: IWorkflowParams): void {
+    const tmpFilename = `${filename}.tmp`;
+    const writeResult = safeFs.writeFileSync(tmpFilename, JSON.stringify(params, null, 2));
+    if (!writeResult.ok) {
+      throw new Error(`Failed to write instance parameters: ${writeResult.error.message}`);
+    }
+    const renameResult = safeFs.renameSync(tmpFilename, filename);
+    if (!renameResult.ok) {
+      safeFs.rmSync(tmpFilename, { force: true });
+      throw new Error(`Failed to write instance parameters: ${renameResult.error.message}`);
+    }
+  }
+
+  /**
+   * Build an in-memory instance for a workflow without touching disk. The
+   * instance is materialised (see createWorkflowInstance) once the user edits
+   * a parameter or launches the workflow, so merely viewing a workflow no
+   * longer leaves empty instances behind.
+   */
+  async prepareWorkflowInstance(
+    workflow_id: string,
+    version: string
+  ): Promise<{
+    instance: IWorkflowInstance;
+    params: IWorkflowParams;
+    workflow_id: string;
+    version: string;
+  }> {
+    const { owner } = parseRepoUrl(workflow_id);
+    const { workflow, workflow_version } = this.resolveWorkflowVersion(workflow_id, version);
+    const repo_and_version = `${workflow.repo}@${workflow_version.version}`;
+    const existing_ids = this.workflow_instances.map((inst) => inst.id);
+    const instance_name = generateUniqueName(existing_ids);
+    const { defaults, managed } = await this.buildDefaultParams(
+      workflow_id,
+      workflow,
+      workflow_version,
+      instance_name,
+      false
+    );
+    const params = { ...defaults, ...managed };
+    const instance = new WorkflowInstance({
+      id: '',
+      name: instance_name,
+      workflow_version,
+      path: path.join(this.instances_path, owner, repo_and_version, instance_name),
+      status: WorkflowStatus.Created,
+      params,
+      draft: true
+    });
+    return { instance, params, workflow_id: `${owner}/${workflow.repo}`, version };
+  }
+
+  async createWorkflowInstance(
+    workflow_id: string,
+    version: string,
+    opts: { name?: string; params?: IWorkflowParams } = {}
+  ): Promise<IWorkflowInstance> {
+    const { owner } = parseRepoUrl(workflow_id);
+    const { workflow, workflow_version } = this.resolveWorkflowVersion(workflow_id, version);
+    const repo_and_version = `${workflow.repo}@${workflow_version.version}`;
+    const existing_ids = this.workflow_instances.map((inst) => inst.id);
+    // A name reserved by a draft is reused when still available so the draft's
+    // pre-computed outdir stays valid when it is materialised.
+    const reservedNameUsed = Boolean(opts.name && !existing_ids.includes(opts.name));
+    const instance_name = reservedNameUsed
+      ? (opts.name as string)
+      : generateUniqueName(existing_ids);
+    const instance_id = instance_name;
+    const instance_path = path.join(this.instances_path, owner, repo_and_version, instance_name);
+    this.ensurePathExists(instance_path);
+
+    // Catalogue defaults, overlaid with the app-managed store_dir/outdir values
+    // and finally by any parameters carried over from a draft, so explicit
+    // edits win. If the draft's reserved name was taken the managed paths are
+    // recomputed for the new name and must win over the stale draft values.
+    const { defaults, managed } = await this.buildDefaultParams(
+      workflow_id,
+      workflow,
+      workflow_version,
+      instance_name,
+      true
+    );
+    const params: Record<string, any> = { ...defaults, ...managed, ...(opts.params ?? {}) };
+    if (opts.params && !reservedNameUsed) {
+      Object.assign(params, managed);
+    }
+    if (Object.keys(params).length > 0) {
+      this.writeParamsFile(path.join(instance_path, 'glacier-params.json'), params);
     }
 
     const instance = new WorkflowInstance({
@@ -1081,6 +1182,24 @@ export class Collection {
     this.workflow_instances.push(instance);
     this.recordRunWorkflow(instance, 'created');
     return instance;
+  }
+
+  /** Persist user-edited parameters for an existing (materialised) instance. */
+  async saveWorkflowInstanceParams(
+    instance: IWorkflowInstance,
+    params: IWorkflowParams
+  ): Promise<IWorkflowParams> {
+    if (instance?.draft) {
+      throw new Error('Cannot save parameters for an unmaterialised instance.');
+    }
+    const local_instance = this.workflow_instances.find((inst) => inst.id === instance.id);
+    if (!local_instance) {
+      throw new Error(`Instance ${instance.id} not found in collection.`);
+    }
+    const filename = path.join(local_instance.path, 'glacier-params.json');
+    this.writeParamsFile(filename, params);
+    local_instance.params = params;
+    return params;
   }
 
   async listWorkflowInstances(): Promise<IWorkflowInstance[]> {
@@ -1146,6 +1265,8 @@ export class Collection {
     // Find instance
     const local_instance = this.workflow_instances.find((inst) => inst.id === instance.id);
     if (!local_instance) {
+      // Drafts carry their defaults in memory until they are materialised.
+      if (instance?.draft) return instance.params ?? {};
       throw new Error(`Instance ${instance.id} not found in collection.`);
     }
     const filename = path.join(local_instance.path, 'glacier-params.json');
@@ -1166,6 +1287,7 @@ export class Collection {
     // Find instance
     const local_instance = this.workflow_instances.find((inst) => inst.id === instance.id);
     if (!local_instance) {
+      if (instance?.draft) return null;
       throw new Error(`Instance ${instance.id} not found in collection.`);
     }
     const filename = path.join(local_instance.path, 'glacier-profile.json');
@@ -1742,6 +1864,8 @@ export class Collection {
   async getAvailableProfiles(instance: IWorkflowInstance): Promise<string[]> {
     const local_instance = this.workflow_instances.find((inst) => inst.id === instance.id);
     if (!local_instance) {
+      // Profiles only depend on the workflow's nextflow.config, so drafts work.
+      if (instance?.draft) return await getAvailableProfiles(instance);
       throw new Error(`Instance ${instance.id} not found in collection.`);
     }
     return await getAvailableProfiles(local_instance);

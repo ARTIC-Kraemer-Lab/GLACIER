@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Box,
   Paper,
@@ -74,7 +74,8 @@ export default function ParametersPage({
   logMessage,
   onEditComplete,
   onLaunchSuccess,
-  startOnParamsTab
+  startOnParamsTab,
+  ensureInstance
 }) {
   const { t } = useTranslation();
 
@@ -101,6 +102,97 @@ export default function ParametersPage({
   const paramsFilter = 'JSON';
   const paramsFileFilters = [{ name: paramsFilter, extensions: ['json'] }];
 
+  const ensureInstanceRef = useRef(ensureInstance);
+  ensureInstanceRef.current = ensureInstance;
+  // JsonForms applies schema defaults and fires onChange without any user
+  // action; only edits following a pointer/keyboard interaction count as
+  // edits worth creating an instance for.
+  const userInteractedRef = useRef(false);
+  // Set once a user edit has landed. The initial parameter load is async and
+  // must not overwrite values typed while it was in flight.
+  const userEditedRef = useRef(false);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingParamsRef = useRef<Record<string, unknown> | null>(null);
+  const materializedRef = useRef<any>(null);
+  const persistRef = useRef<(data: Record<string, unknown>) => void>(() => {});
+  // Saves run in order, so a blur or unmount flush cannot overtake an earlier
+  // debounced save and leave stale parameters on disk.
+  const saveChainRef = useRef<Promise<void>>(Promise.resolve());
+
+  const stripProfile = (data: Record<string, unknown>) => {
+    const copy = { ...data };
+    delete copy['profile'];
+    return copy;
+  };
+
+  // Save edits without waiting for a launch. When the workflow is still a
+  // draft the first save materialises it on disk.
+  const persistParams = async (data: Record<string, unknown>) => {
+    try {
+      const stripped = stripProfile(data);
+      let target = materializedRef.current ?? instance;
+      if (!target || target.draft) {
+        target = await ensureInstanceRef.current?.(stripped);
+        if (!target) return;
+        materializedRef.current = target;
+      }
+      await API.saveWorkflowInstanceParams(target, stripped);
+      // Only clear the pending value if nothing newer has been typed while the
+      // save was in flight.
+      if (pendingParamsRef.current === data) pendingParamsRef.current = null;
+    } catch (err: any) {
+      // Keep the pending value so the next edit, blur or unmount retries.
+      logMessage(`Failed to save parameters: ${err?.message ?? 'Unknown error'}`, 'error');
+    }
+  };
+  persistRef.current = persistParams;
+
+  const queuePersist = (data: Record<string, unknown>) => {
+    saveChainRef.current = saveChainRef.current
+      .catch(() => {})
+      .then(() => persistRef.current(data));
+  };
+  const queuePersistRef = useRef(queuePersist);
+  queuePersistRef.current = queuePersist;
+
+  const flushPending = () => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+    const pending = pendingParamsRef.current;
+    if (pending) queuePersistRef.current(pending);
+  };
+  const flushPendingRef = useRef(flushPending);
+  flushPendingRef.current = flushPending;
+
+  const scheduleAutosave = (data: Record<string, unknown>) => {
+    pendingParamsRef.current = data;
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      autosaveTimerRef.current = null;
+      flushPendingRef.current();
+    }, 500);
+  };
+
+  // Flush a pending edit when the page closes so parameter changes made just
+  // before navigating away are not lost.
+  useEffect(() => {
+    return () => {
+      flushPendingRef.current();
+    };
+  }, []);
+
+  const resolveInstance = async (params, activate = false) => {
+    if (instance && !instance.draft && instance.id) return instance;
+    try {
+      return await ensureInstanceRef.current?.(stripProfile(params), activate);
+    } catch (err: any) {
+      logMessage(`Error preparing instance: ${err?.message ?? 'Unknown error'}`, 'error');
+      return null;
+    }
+  };
+
   const onLaunch = async (instance, params, ignoreValidation = false) => {
     if (!isValidWorkflow) {
       logMessage(t('parameters.no-valid-workflow'), 'error');
@@ -114,15 +206,25 @@ export default function ParametersPage({
     const call_params = { ...params };
     const profile = params['profile'] || defaultProfile;
     delete call_params['profile'];
+    // Materialise an unsaved draft before launching it and switch to the
+    // instance (the launch path is not part of parameter entry)
+    const target = await resolveInstance(params, true);
+    if (!target) return;
     // Return PID on success
-    const result = await API.runWorkflow(instance, call_params, { profile: profile });
+    let result;
+    try {
+      result = await API.runWorkflow(target, call_params, { profile: profile });
+    } catch (err: any) {
+      logMessage(`Error launching workflow: ${err?.message ?? 'Unknown error'}`, 'error');
+      return;
+    }
     if (!result.ok) {
       logMessage(`Error launching workflow: ${result.error.message || 'Unknown error'}`, 'error');
       return;
     }
-    logMessage(`Launched workflow ${instance.name}`);
+    logMessage(`Launched workflow ${target.name}`);
     refreshInstancesList();
-    if (onLaunchSuccess) onLaunchSuccess(instance.id);
+    if (onLaunchSuccess) onLaunchSuccess(target.id);
     if (onEditComplete) onEditComplete();
   };
 
@@ -148,8 +250,11 @@ export default function ParametersPage({
         logMessage('Invalid parameters file: must be a JSON object.', 'error');
         return;
       }
+      userInteractedRef.current = true;
+      userEditedRef.current = true;
       setParams(loaded);
       setTabSelected(2);
+      scheduleAutosave(loaded);
       logMessage(`Parameters loaded from ${filePath}`);
     } catch {
       logMessage('Invalid parameters file: could not parse JSON.', 'error');
@@ -158,14 +263,22 @@ export default function ParametersPage({
 
   const onTestLaunchWorkflow = async (testProfiles) => {
     const test_profiles_str = testProfiles.join(',');
-    const result = await API.runWorkflow(instance, {}, { profile: test_profiles_str });
+    const target = await resolveInstance({}, true);
+    if (!target) return;
+    let result;
+    try {
+      result = await API.runWorkflow(target, {}, { profile: test_profiles_str });
+    } catch (err: any) {
+      logMessage(`Error launching test workflow: ${err?.message ?? 'Unknown error'}`, 'error');
+      return;
+    }
     if (!result.ok) {
       logMessage(`Error launching test workflow: ${result.error.message}`, 'error');
       return;
     }
-    logMessage(`Launched test workflow ${instance.name}`);
+    logMessage(`Launched test workflow ${target.name}`);
     refreshInstancesList();
-    if (onLaunchSuccess) onLaunchSuccess(instance.id);
+    if (onLaunchSuccess) onLaunchSuccess(target.id);
     if (onEditComplete) onEditComplete();
   };
 
@@ -207,7 +320,8 @@ export default function ParametersPage({
     };
     const get_params = async () => {
       const paramsResult = await API.getWorkflowInstanceParams(instance);
-      if (paramsResult.ok && paramsResult.data) {
+      // Never clobber an edit made while the request was in flight.
+      if (!userEditedRef.current && paramsResult.ok && paramsResult.data) {
         setParams(paramsResult.data);
       }
     };
@@ -397,16 +511,38 @@ export default function ParametersPage({
             sx={{ p: 2, mb: 2, '& .MuiCardContent-root > div > * + *': { mt: 1.5 } }}
           >
             {!isEmpty(schema) ? (
-              <JsonForms
-                schema={schema}
-                uischema={uischema}
-                data={params}
-                renderers={renderers}
-                onChange={({ data }) => {
-                  setParams(data);
+              <Box
+                onPointerDownCapture={() => {
+                  userInteractedRef.current = true;
                 }}
-                ajv={ajv}
-              />
+                onKeyDownCapture={() => {
+                  userInteractedRef.current = true;
+                }}
+                onFocusCapture={() => {
+                  userInteractedRef.current = true;
+                }}
+                // Commit as soon as focus leaves the form (clicking Launch, the
+                // sidebar, another field) instead of waiting for the debounce.
+                onBlurCapture={() => {
+                  flushPendingRef.current();
+                }}
+              >
+                <JsonForms
+                  schema={schema}
+                  uischema={uischema}
+                  data={params}
+                  renderers={renderers}
+                  onChange={({ data }) => {
+                    setParams(data);
+                    // Ignore programmatic changes (e.g. schema defaults) so a
+                    // previewed workflow is not materialised without an edit.
+                    if (!userInteractedRef.current) return;
+                    userEditedRef.current = true;
+                    scheduleAutosave(data);
+                  }}
+                  ajv={ajv}
+                />
+              </Box>
             ) : (
               <Typography>{t('parameters.params.no-parameters')}</Typography>
             )}

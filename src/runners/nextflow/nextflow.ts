@@ -180,10 +180,14 @@ export async function runWorkflow(
     fs_sync.mkdirSync(instancePath, { recursive: true });
   }
 
-  // Save parameters to a file in the instance folder
+  // Save parameters to a file in the instance folder. Write then rename so a
+  // concurrent reader (the Parameters page reloading after launch) never sees
+  // a partially written file.
   const paramsFile = path.resolve(instancePath, 'glacier-params.json');
   if (!resume && !restart) {
-    await fs.writeFile(paramsFile, JSON.stringify(params, null, 2), 'utf8');
+    const tmpParamsFile = `${paramsFile}.tmp`;
+    await fs.writeFile(tmpParamsFile, JSON.stringify(params, null, 2), 'utf8');
+    await fs.rename(tmpParamsFile, paramsFile);
   }
 
   // Resolve the execution profile: an explicit profile wins; on resume/restart
