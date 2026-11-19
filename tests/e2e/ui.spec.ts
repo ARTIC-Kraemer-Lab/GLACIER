@@ -217,9 +217,13 @@ test('cancel a running workflow marks it cancelled', async ({ page }, testInfo) 
     timeout: TIMEOUT_60s
   });
 
-  page.once('dialog', (dialog) => dialog.accept());
   await page.click('#execution-actions-button');
   await page.click('#execution-cancel');
+
+  // Confirm the in-app dialog (no native window.confirm, so this works on
+  // every platform including Electron on macOS).
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.click('#execution-confirm-okay');
 
   // A cancelled run must not be reported as failed
   await expect(page.locator('#workflow-status-chip')).toHaveText('Cancelled', {

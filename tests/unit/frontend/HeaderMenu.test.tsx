@@ -35,8 +35,9 @@ function renderMenu(instance = runningInstance) {
 }
 
 async function openMenu() {
+  const button = await screen.findByRole('button', { name: 'monitor.execution.actions' });
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'monitor.execution.actions' }));
+    fireEvent.click(button);
   });
 }
 
@@ -46,6 +47,16 @@ async function clickMenuItem(name: string) {
   await act(async () => {
     fireEvent.click(item);
   });
+  // The confirmation dialog opens after the menu's exit transition.
+  await screen.findByRole('dialog');
+}
+
+async function confirmDialog() {
+  const okay = await screen.findByRole('button', { name: 'monitor.execution.confirm' });
+  await act(async () => {
+    fireEvent.click(okay);
+  });
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 }
 
 beforeAll(() => {
@@ -59,7 +70,6 @@ beforeAll(() => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.spyOn(window, 'confirm').mockReturnValue(true);
   api.cancelWorkflowInstance.mockResolvedValue({ ok: true, data: { stopped: true } });
   api.killWorkflowInstance.mockResolvedValue({ ok: true, data: { stopped: true } });
   api.runWorkflow.mockResolvedValue({ ok: true, data: {} });
@@ -70,11 +80,33 @@ afterEach(() => {
 });
 
 describe('HeaderMenu — cancel / force cancel', () => {
+  it('asks for confirmation before cancelling', async () => {
+    renderMenu();
+
+    await clickMenuItem('monitor.execution.cancel');
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('monitor.execution.cancel-confirm')).toBeInTheDocument();
+    expect(api.cancelWorkflowInstance).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when the confirmation is dismissed', async () => {
+    renderMenu();
+
+    await clickMenuItem('monitor.execution.cancel');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'common.cancel' }));
+    });
+
+    expect(api.cancelWorkflowInstance).not.toHaveBeenCalled();
+  });
+
   it('offers force cancel when a graceful cancel does not stop the run', async () => {
     api.cancelWorkflowInstance.mockResolvedValue({ ok: true, data: { stopped: false } });
     const { logMessage, onRefresh } = renderMenu();
 
     await clickMenuItem('monitor.execution.cancel');
+    await confirmDialog();
 
     await waitFor(() => expect(api.cancelWorkflowInstance).toHaveBeenCalledTimes(1));
     await openMenu();
@@ -92,6 +124,7 @@ describe('HeaderMenu — cancel / force cancel', () => {
     const { onRefresh } = renderMenu();
 
     await clickMenuItem('monitor.execution.cancel');
+    await confirmDialog();
 
     await waitFor(() => expect(onRefresh).toHaveBeenCalledTimes(1));
     await openMenu();
@@ -106,9 +139,12 @@ describe('HeaderMenu — cancel / force cancel', () => {
     const { onRefresh } = renderMenu();
 
     await clickMenuItem('monitor.execution.cancel');
+    await confirmDialog();
     await waitFor(() => expect(api.cancelWorkflowInstance).toHaveBeenCalled());
 
     await clickMenuItem('monitor.execution.force-cancel');
+    expect(await screen.findByText('monitor.execution.force-cancel-confirm')).toBeInTheDocument();
+    await confirmDialog();
 
     await waitFor(() => expect(api.killWorkflowInstance).toHaveBeenCalledTimes(1));
     expect(onRefresh).toHaveBeenCalled();
@@ -119,6 +155,7 @@ describe('HeaderMenu — cancel / force cancel', () => {
     const { onRestart } = renderMenu();
 
     await clickMenuItem('monitor.execution.restart');
+    await confirmDialog();
 
     await waitFor(() => expect(api.cancelWorkflowInstance).toHaveBeenCalledTimes(1));
     expect(onRestart).not.toHaveBeenCalled();
@@ -132,6 +169,7 @@ describe('HeaderMenu — cancel / force cancel', () => {
     const { onRestart } = renderMenu({ ...runningInstance, status: 'completed' });
 
     await clickMenuItem('monitor.execution.restart');
+    await confirmDialog();
 
     await waitFor(() => expect(onRestart).toHaveBeenCalledWith('instance-1'));
     expect(api.cancelWorkflowInstance).not.toHaveBeenCalled();

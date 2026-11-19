@@ -251,7 +251,8 @@
       "force-cancel": "Force cancel",
       "force-cancel-confirm": "Are you sure you want to force cancel this run? This terminates it immediately without letting Nextflow clean up.",
       "force-cancelling": "Force cancelling...",
-      "cancel-unconfirmed": "Run did not stop — use Force cancel."
+      "cancel-unconfirmed": "Run did not stop — use Force cancel.",
+      "confirm": "Confirm"
     },
     "progress": {
       "title": "Progress",

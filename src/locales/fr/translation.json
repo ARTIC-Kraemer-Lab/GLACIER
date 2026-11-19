@@ -245,7 +245,8 @@
       "force-cancel": "Forcer l'annulation",
       "force-cancel-confirm": "Êtes-vous sûr de vouloir forcer l'annulation de cette exécution ? Cela la terminera immédiatement sans permettre à Nextflow de nettoyer.",
       "force-cancelling": "Annulation forcée en cours...",
-      "cancel-unconfirmed": "L'exécution ne s'est pas arrêtée — utilisez Forcer l'annulation."
+      "cancel-unconfirmed": "L'exécution ne s'est pas arrêtée — utilisez Forcer l'annulation.",
+      "confirm": "Confirmer"
     },
     "progress": {
       "title": "Progrès",
