@@ -290,6 +290,18 @@ test('parameters are reachable from the tab panel', async ({ page }) => {
   await expect(page.getByLabel('Sleep Time')).toHaveValue('-1');
 });
 
+test('renders Mermaid diagrams in the workflow description', async ({ page }) => {
+  await setupLocalCollections(page);
+
+  await page.click('#sidebar-library-button');
+  await page.click(`#card-${cssEscape('sleep')}`);
+
+  // The sleep workflow README contains a Mermaid fence; it must be replaced by
+  // the rendered SVG rather than shown as a code block.
+  await expect(page.locator('.mermaid svg')).toHaveCount(1, { timeout: TIMEOUT_30s });
+  await expect(page.locator('.mermaid-error')).toHaveCount(0);
+});
+
 async function runOutdirWorkflow(
   page: Page,
   docsPath: string,

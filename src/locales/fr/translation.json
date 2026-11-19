@@ -185,7 +185,9 @@
     "launch-workflow": "Lancer le flux de travail",
     "launch-ignore-validation": "Lancer en ignorant la validation",
     "info": {
-      "title": "Description"
+      "title": "Description",
+      "mermaid-error": "Impossible de rendre ce diagramme Mermaid.",
+      "mermaid-diagram": "Diagramme Mermaid"
     },
     "license": {
       "title": "Licence"

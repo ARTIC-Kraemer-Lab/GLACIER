@@ -1,4 +1,5 @@
 // Markdown rendering
+import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkDirective from 'remark-directive';
@@ -6,9 +7,24 @@ import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import { defaultSchema } from 'hast-util-sanitize';
 import { remarkAdmonitions } from './remarkAdmonitions';
+import MermaidDiagram from './MermaidDiagram';
 import './markdown.css';
 import { useTheme } from '@mui/material/styles';
 import { API } from '../../services/api.js';
+
+function childText(node) {
+  return React.Children.toArray(node)
+    .map((child) => (typeof child === 'string' ? child : ''))
+    .join('');
+}
+
+function isMermaidFence(node) {
+  return (
+    React.isValidElement(node) &&
+    typeof node.props?.className === 'string' &&
+    node.props.className.split(/\s+/).includes('language-mermaid')
+  );
+}
 
 const sanitizeSchema = {
   ...defaultSchema,
@@ -43,6 +59,16 @@ export default function MarkdownRenderer({ content, basePath }) {
         remarkPlugins={[remarkGfm, remarkDirective, remarkAdmonitions]}
         rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
         components={{
+          // Render ```mermaid fences as diagrams. Overriding `pre` (rather than
+          // `code`) avoids nesting the diagram inside a <pre> element.
+          pre({ children }) {
+            const child = React.Children.toArray(children)[0];
+            if (isMermaidFence(child)) {
+              return <MermaidDiagram chart={childText(child.props.children)} />;
+            }
+            return <pre>{children}</pre>;
+          },
+
           // Image
           img({ src = '', alt, ...props }) {
             const isExternal =

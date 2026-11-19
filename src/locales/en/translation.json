@@ -188,7 +188,9 @@
     "launch-workflow": "Launch Workflow",
     "launch-ignore-validation": "Launch ignoring validation",
     "info": {
-      "title": "Description"
+      "title": "Description",
+      "mermaid-error": "Unable to render this Mermaid diagram.",
+      "mermaid-diagram": "Mermaid diagram"
     },
     "license": {
       "title": "License"
