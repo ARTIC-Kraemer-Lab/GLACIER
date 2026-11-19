@@ -138,6 +138,7 @@
       "completed": "Terminé",
       "closed": "Fermé",
       "failed": "Échoué",
+      "cancelled": "Annulé",
       "unknown": "Inconnu",
       "undefined": "Indéfini"
     },
@@ -241,9 +242,11 @@
       "restart": "Redémarrer",
       "restart-confirm": "Êtes-vous sûr de vouloir redémarrer cette exécution ? Cela relancera tous les processus.",
       "restarting": "Redémarrage en cours...",
-      "kill": "Tuer",
-      "kill-confirm": "Êtes-vous sûr de vouloir tuer cette exécution ? Cela arrêtera immédiatement tous les processus en cours.",
-      "killing": "Arrêt en cours..."
+      "force-cancel": "Forcer l'annulation",
+      "force-cancel-confirm": "Êtes-vous sûr de vouloir forcer l'annulation de cette exécution ? Cela la terminera immédiatement sans permettre à Nextflow de nettoyer.",
+      "force-cancelling": "Annulation forcée en cours...",
+      "cancel-unconfirmed": "L'exécution ne s'est pas arrêtée — utilisez Forcer l'annulation.",
+      "confirm": "Confirmer"
     },
     "progress": {
       "title": "Progrès",
@@ -252,6 +255,7 @@
       "completed": "Terminé",
       "unknown": "Inconnu",
       "failed": "Échoué",
+      "cancelled": "Annulé",
       "view-log": "Voir le journal",
       "hide-log": "Masquer le journal",
       "open-folder": "Ouvrir le dossier",

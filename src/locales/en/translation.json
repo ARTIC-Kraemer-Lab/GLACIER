@@ -141,6 +141,7 @@
       "completed": "Completed",
       "closed": "Closed",
       "failed": "Failed",
+      "cancelled": "Cancelled",
       "unknown": "Unknown",
       "undefined": "Undefined"
     },
@@ -247,9 +248,11 @@
       "restart": "Restart",
       "restart-confirm": "Are you sure you want to restart this run?",
       "restarting": "Restarting...",
-      "kill": "Kill",
-      "kill-confirm": "Are you sure you want to kill this run?",
-      "killing": "Killing..."
+      "force-cancel": "Force cancel",
+      "force-cancel-confirm": "Are you sure you want to force cancel this run? This terminates it immediately without letting Nextflow clean up.",
+      "force-cancelling": "Force cancelling...",
+      "cancel-unconfirmed": "Run did not stop — use Force cancel.",
+      "confirm": "Confirm"
     },
     "progress": {
       "title": "Progress",
@@ -258,6 +261,7 @@
       "completed": "Completed",
       "unknown": "Unknown",
       "failed": "Failed",
+      "cancelled": "Cancelled",
       "view-log": "View Log",
       "hide-log": "Hide Log",
       "open-folder": "Open Folder",

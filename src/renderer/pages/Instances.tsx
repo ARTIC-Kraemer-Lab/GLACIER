@@ -94,6 +94,8 @@ const statusColor = (status: string | undefined) => {
       return 'default';
     case WorkflowStatus.Failed:
       return 'error';
+    case WorkflowStatus.Cancelled:
+      return 'warning';
     default:
       return 'default';
   }
@@ -164,6 +166,7 @@ const InstanceAccordion = React.memo(function InstanceAccordion({
             }}
           >
             <Chip
+              data-testid={`instance-status-${instance.name}`}
               label={t('instances.statuses.' + status) || status}
               color={statusColor(status) as any}
               size="small"

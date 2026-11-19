@@ -19,6 +19,7 @@ const TIMEOUT_60s = 60_000;
 const isCI = !!process.env.CI;
 const TIMEOUT_WORKFLOW = isCI ? 60_000 : TIMEOUT_30s;
 const TIMEOUT_WORKFLOW_TEST = 90_000;
+const TIMEOUT_CANCEL_TEST = isCI ? 180_000 : 120_000;
 
 async function waitForLogLine(page: Page, text: string | RegExp, timeout = 60000) {
   await page.waitForEvent('console', {
@@ -26,6 +27,28 @@ async function waitForLogLine(page: Page, text: string | RegExp, timeout = 60000
       text instanceof RegExp ? text.test(msg.text()) : msg.text().includes(text),
     timeout
   });
+}
+
+/** Point GLACIER at the local test collections and a fresh documents folder. */
+async function setupLocalCollections(page: Page): Promise<{ collectionsPath: string }> {
+  const collectionsPath = path.resolve(path.join(__dirname, '..', 'test-data'));
+  await page.click('#sidebar-settings-button');
+  await page.click('#settings-general-panel');
+  const docsPath = path.resolve(path.join(os.tmpdir(), 'GLACIER-docs-' + Date.now().toString()));
+  fs.mkdirSync(docsPath, { recursive: true });
+  await page.click('#settings-reopen-setup');
+  // Let the dialog mount and its state settle before typing into the controlled
+  // inputs, otherwise a pending re-render can overwrite the entered paths.
+  const dialog = page.getByRole('dialog', { name: 'Welcome to GLACIER' });
+  await expect(dialog).toBeVisible({ timeout: TIMEOUT_10s });
+  await page.waitForTimeout(500);
+  await page.fill('#setup-config-folder', `${collectionsPath}`);
+  await page.fill('#setup-documents-folder', `${docsPath}`);
+  await expect(page.locator('#setup-config-folder')).toHaveValue(collectionsPath);
+  await expect(page.locator('#setup-documents-folder')).toHaveValue(docsPath);
+  await page.click('#setup-continue-button');
+  await expect(dialog).toBeHidden({ timeout: TIMEOUT_30s });
+  return { collectionsPath };
 }
 
 test('show title', async ({ page }) => {
@@ -165,6 +188,64 @@ test('launch local workflow', async ({ page }) => {
   // The raw parameters are available verbatim
   await page.getByText('Raw JSON').click();
   await expect(page.locator('pre').filter({ hasText: '"sleep_time": 5' })).toBeVisible();
+});
+
+test('cancel a running workflow marks it cancelled', async ({ page }, testInfo) => {
+  // Cancellation is a process-management behaviour: the browser engine is
+  // irrelevant, so Chromium (web/HTTP) and Electron (IPC) cover the transports
+  // across the whole OS matrix.
+  test.skip(
+    testInfo.project.name === 'Web (firefox)' || testInfo.project.name === 'Web (webkit)',
+    'Cancellation behaviour is browser-independent'
+  );
+  test.setTimeout(TIMEOUT_CANCEL_TEST);
+  const { collectionsPath } = await setupLocalCollections(page);
+
+  // Launch the sleep workflow with a long enough run to cancel it
+  await page.click('#sidebar-library-button');
+  await page.click(`#card-${cssEscape('sleep')}`);
+  await page.click('#parameters-params-tab');
+  await page.getByLabel('Sleep Time').fill('60');
+  await page.getByLabel('Sleep Time').blur();
+  await page.getByRole('button', { name: 'Launch Workflow' }).click();
+
+  const instanceName = await page.getByTestId('instance-name').textContent();
+  expect(instanceName).toBeTruthy();
+
+  // The ProcessTracker tree shows SLEEPER once Nextflow has started the pipeline
+  await expect(page.getByText('SLEEPER', { exact: true }).first()).toBeVisible({
+    timeout: TIMEOUT_60s
+  });
+
+  await page.click('#execution-actions-button');
+  await page.click('#execution-cancel');
+
+  // Confirm the in-app dialog (no native window.confirm, so this works on
+  // every platform including Electron on macOS).
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.click('#execution-confirm-okay');
+
+  // A cancelled run must not be reported as failed
+  await expect(page.locator('#workflow-status-chip')).toHaveText('Cancelled', {
+    timeout: TIMEOUT_60s
+  });
+  await expect(page.getByText('Failed', { exact: true })).toHaveCount(0);
+
+  // The Instances list reports the same status
+  await page.click('#sidebar-instances-button');
+  await expect(page.getByTestId(`instance-status-${instanceName}`)).toHaveText('Cancelled');
+
+  // And it is persisted, so the status survives an app restart
+  await expect
+    .poll(
+      () => {
+        const raw = fs.readFileSync(path.join(collectionsPath, 'instances.json'), 'utf8');
+        const db = JSON.parse(raw);
+        return db.runs.find((run: any) => run.id === instanceName)?.runs?.at(-1)?.status;
+      },
+      { timeout: TIMEOUT_30s }
+    )
+    .toBe('cancelled');
 });
 
 test('parameters are reachable from the tab panel', async ({ page }) => {
