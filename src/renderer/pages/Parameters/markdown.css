@@ -44,3 +44,26 @@
 .markdown-dark .admonition-important {
   background: rgba(106, 27, 154, 0.12);
 }
+
+.mermaid {
+  margin: 1em 0;
+  overflow-x: auto;
+}
+
+.mermaid svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.mermaid-error-message {
+  display: block;
+  margin-top: 0.5em;
+  font-size: 0.875rem;
+}
+.markdown-light .mermaid-error-message {
+  color: #b45309;
+}
+.markdown-dark .mermaid-error-message {
+  color: #fbbf24;
+}
