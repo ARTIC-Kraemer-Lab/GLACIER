@@ -1083,15 +1083,9 @@ export class Collection {
 
   /** Write parameters atomically so concurrent readers never see partial JSON. */
   private writeParamsFile(filename: string, params: IWorkflowParams): void {
-    const tmpFilename = `${filename}.tmp`;
-    const writeResult = safeFs.writeFileSync(tmpFilename, JSON.stringify(params, null, 2));
+    const writeResult = safeFs.writeFileAtomicSync(filename, JSON.stringify(params, null, 2));
     if (!writeResult.ok) {
       throw new Error(`Failed to write instance parameters: ${writeResult.error.message}`);
-    }
-    const renameResult = safeFs.renameSync(tmpFilename, filename);
-    if (!renameResult.ok) {
-      safeFs.rmSync(tmpFilename, { force: true });
-      throw new Error(`Failed to write instance parameters: ${renameResult.error.message}`);
     }
   }
 

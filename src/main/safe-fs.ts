@@ -42,6 +42,70 @@ export function writeFileSync(
   });
 }
 
+/**
+ * Unique sibling temp path for an atomic write. Writers must not share a temp
+ * file: two concurrent write+rename sequences would race and one rename would
+ * fail with ENOENT (observed on Windows when a launch overlaps an autosave).
+ */
+let tempFileCounter = 0;
+function tempFilePath(file: string): string {
+  tempFileCounter += 1;
+  return `${file}.${process.pid}.${Date.now()}.${tempFileCounter}.tmp`;
+}
+
+/** Write a file atomically: write to a unique temp file, then rename. */
+export function writeFileAtomicSync(
+  file: string,
+  data: string,
+  options?: fs.WriteFileOptions
+): SafeResult<void> {
+  const tmp = tempFilePath(file);
+  const writeResult = writeFileSync(tmp, data, options);
+  if (!writeResult.ok) {
+    rmSync(tmp, { force: true });
+    return writeResult;
+  }
+  const renameResult = renameSync(tmp, file);
+  if (!renameResult.ok) {
+    rmSync(tmp, { force: true });
+    return renameResult;
+  }
+  return { ok: true, data: undefined };
+}
+
+const RENAME_RETRIES = 3;
+const RENAME_RETRY_DELAY_MS = 25;
+
+/**
+ * Async variant of writeFileAtomicSync. Windows can briefly refuse the rename
+ * while another process has the destination open, so retry EPERM/EBUSY.
+ */
+export async function writeFileAtomic(
+  file: string,
+  data: string,
+  encoding: BufferEncoding = 'utf8'
+): Promise<void> {
+  const tmp = tempFilePath(file);
+  try {
+    await fs.promises.writeFile(tmp, data, encoding);
+    let lastError: unknown;
+    for (let attempt = 0; attempt < RENAME_RETRIES; attempt += 1) {
+      try {
+        await fs.promises.rename(tmp, file);
+        return;
+      } catch (err: any) {
+        lastError = err;
+        if (err?.code !== 'EPERM' && err?.code !== 'EBUSY') throw err;
+        await new Promise((resolve) => setTimeout(resolve, RENAME_RETRY_DELAY_MS));
+      }
+    }
+    throw lastError;
+  } catch (err) {
+    await fs.promises.rm(tmp, { force: true }).catch(() => {});
+    throw err;
+  }
+}
+
 export function statSync(path: string): SafeResult<fs.Stats> {
   return wrap(() => fs.statSync(path));
 }
