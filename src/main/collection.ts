@@ -46,6 +46,13 @@ import { parseNextflowLog } from '../runners/nextflow/nf-parse.js';
 //
 
 const instance_database_file = 'instances.json';
+/**
+ * Layout version of the instance database. Bumped when the on-disk shape
+ * changes; every writer re-serialises the whole parsed object, so an older
+ * build preserves this key rather than stripping it. Compaction is skipped for
+ * databases written by a newer build.
+ */
+const INSTANCE_DATABASE_VERSION = 2;
 /** How long a manual stop waits for the process (or container) to exit */
 const CANCEL_TIMEOUT_MS = 10_000;
 
@@ -890,9 +897,67 @@ export class Collection {
         }
       }
     }
+    // Collapse the duplicate records left behind by older builds, which recorded
+    // a run entry on every status poll. Back up the original file once, before
+    // the first compaction, so the pre-upgrade data is recoverable.
+    if (this.compactRunEntries(db)) {
+      const backupPath = `${db_path}.pre-compaction.bak`;
+      if (!safeFs.existsSync(backupPath)) safeFs.writeFileSync(backupPath, raw.data);
+      db_updated = true;
+    }
     if (db_updated) {
       this.writeInstanceDatabase(db, db_path);
     }
+  }
+
+  /**
+   * Collapse consecutive run entries that differ only in their timestamp and
+   * process snapshot.
+   *
+   * A run is recorded as a contiguous block of same-status entries, so blocks
+   * can be reduced to a single record without losing information: the earliest
+   * timestamp is kept (launch detection and elapsed time depend on it) and the
+   * most recent process snapshot is retained.
+   */
+  private compactRunEntries(db: any): boolean {
+    // A database written by a newer build has a layout we do not understand.
+    if (typeof db?.version === 'number' && db.version > INSTANCE_DATABASE_VERSION) return false;
+    let changed = false;
+    for (const run of db.runs) {
+      if (!Array.isArray(run?.runs) || run.runs.length < 2) continue;
+      const compacted: any[] = [];
+      for (const entry of run.runs) {
+        const prev = compacted[compacted.length - 1];
+        if (this.isRedundantRunEntry(prev, entry)) {
+          if (entry.processes?.length) prev.processes = entry.processes;
+          if (entry.pids?.length) prev.pids = entry.pids;
+        } else {
+          compacted.push(entry);
+        }
+      }
+      if (compacted.length !== run.runs.length) {
+        run.runs = compacted;
+        changed = true;
+      }
+    }
+    if (!changed) return false;
+    db.version = INSTANCE_DATABASE_VERSION;
+    return true;
+  }
+
+  /**
+   * True when two run entries carry the same information. Entries without a
+   * status predate the status field and are never merged. Any field other than
+   * the timestamp and process snapshot must match exactly, so an unrecognised
+   * field causes the entries to be kept rather than discarded.
+   */
+  private isRedundantRunEntry(prev: any, entry: any): boolean {
+    if (!prev || !entry) return false;
+    if (typeof entry.status !== 'string' || prev.status !== entry.status) return false;
+    // Undefined keys are omitted by JSON.stringify, leaving the stable fields.
+    const stable = (e: any) =>
+      JSON.stringify({ ...e, datetime: undefined, processes: undefined, pids: undefined });
+    return stable(prev) === stable(entry);
   }
 
   /** Atomic write to instances DB: write to temp file, then rename */

@@ -838,6 +838,98 @@ describe('Collection', () => {
     });
   });
 
+  describe('compactRunEntries', () => {
+    const makeDb = (runs) => ({ runs: [{ id: 'inst', name: 'inst', workflow: 'wf', runs }] });
+    const pollRecords = (n, status, datetime, pids = []) =>
+      Array.from({ length: n }, () => ({ datetime, processes: [], pids, status }));
+
+    it('collapses the records written by status polling', () => {
+      const db = makeDb([
+        { datetime: '2026-01-01T10:00:00Z', processes: [], pids: [], status: 'created' },
+        { datetime: '2026-01-02T09:00:00Z', processes: [], pids: [123], status: 'running' },
+        ...pollRecords(240, 'running', '2026-01-02T09:00:05Z', [123]),
+        { datetime: '2026-01-02T09:10:00Z', processes: [], pids: [], status: 'completed' },
+        ...pollRecords(60, 'completed', '2026-01-02T09:10:05Z'),
+        { datetime: '2026-01-02T09:30:00Z', processes: [], pids: [], status: 'cancelled' },
+        { datetime: '2026-01-02T09:31:00Z', processes: [], pids: [456], status: 'running' },
+        ...pollRecords(60, 'running', '2026-01-02T09:31:05Z', [456])
+      ]);
+
+      expect(collection.compactRunEntries(db)).toBe(true);
+
+      const runs = db.runs[0].runs;
+      expect(runs.map((r) => r.status)).toEqual([
+        'created',
+        'running',
+        'completed',
+        'cancelled',
+        'running'
+      ]);
+      // Block timestamps are kept, so launch detection still works.
+      expect(runs[1].datetime).toBe('2026-01-02T09:00:00Z');
+      expect(runs[4].datetime).toBe('2026-01-02T09:31:00Z');
+      // The most recent process snapshot is retained.
+      expect(runs[4].pids).toEqual([456]);
+    });
+
+    it('never merges records without a status', () => {
+      const db = makeDb([
+        { datetime: '2025-12-31T08:00:00Z', pids: [42] },
+        { datetime: '2025-12-31T09:00:00Z', pids: [42] }
+      ]);
+
+      expect(collection.compactRunEntries(db)).toBe(false);
+      expect(db.runs[0].runs).toHaveLength(2);
+    });
+
+    it('never merges records that differ in another field', () => {
+      const db = makeDb([
+        { datetime: '2026-01-02T09:00:00Z', pids: [], status: 'running', reason: 'a' },
+        { datetime: '2026-01-02T09:00:05Z', pids: [], status: 'running', reason: 'b' }
+      ]);
+
+      expect(collection.compactRunEntries(db)).toBe(false);
+      expect(db.runs[0].runs).toHaveLength(2);
+    });
+
+    it('keeps legacy pid-only records alongside modern ones', () => {
+      const db = makeDb([
+        { datetime: '2025-12-31T08:00:00Z', pids: [42] },
+        { datetime: '2026-01-02T09:00:00Z', pids: [123], status: 'running' },
+        { datetime: '2026-01-02T09:00:05Z', pids: [123], status: 'running' }
+      ]);
+
+      expect(collection.compactRunEntries(db)).toBe(true);
+      expect(db.runs[0].runs).toEqual([
+        { datetime: '2025-12-31T08:00:00Z', pids: [42] },
+        { datetime: '2026-01-02T09:00:00Z', pids: [123], status: 'running' }
+      ]);
+    });
+
+    it('is idempotent and records the schema version', () => {
+      const db = makeDb([
+        { datetime: '2026-01-02T09:00:00Z', pids: [], status: 'running' },
+        { datetime: '2026-01-02T09:00:05Z', pids: [], status: 'running' }
+      ]);
+
+      expect(collection.compactRunEntries(db)).toBe(true);
+      expect(db.version).toBe(2);
+      expect(collection.compactRunEntries(db)).toBe(false);
+    });
+
+    it('leaves the database of a newer build untouched', () => {
+      const db = makeDb([
+        { datetime: '2026-01-02T09:00:00Z', pids: [], status: 'running' },
+        { datetime: '2026-01-02T09:00:05Z', pids: [], status: 'running' }
+      ]);
+      db.version = 99;
+
+      expect(collection.compactRunEntries(db)).toBe(false);
+      expect(db.runs[0].runs).toHaveLength(2);
+      expect(db.version).toBe(99);
+    });
+  });
+
   describe('parseInstanceDatabase', () => {
     const seedInstanceDb = (runs, extra = {}) => {
       const dbPath = path.join(tmpDir, 'instances.json');
@@ -859,6 +951,42 @@ describe('Collection', () => {
       processes: [],
       status: 'completed',
       ...opts
+    });
+
+    it('compacts the database and keeps a one-off backup', async () => {
+      collection.root_path = tmpDir;
+      collection.workflow_instances = [makeInstance()];
+      const dbPath = seedInstanceDb([
+        { datetime: '2026-01-01T10:00:00Z', processes: [], pids: [], status: 'created' },
+        { datetime: '2026-01-02T09:00:00Z', processes: [], pids: [123], status: 'running' },
+        { datetime: '2026-01-02T09:00:05Z', processes: [], pids: [123], status: 'running' },
+        { datetime: '2026-01-02T09:10:00Z', processes: [], pids: [], status: 'completed' }
+      ]);
+
+      await collection.parseInstanceDatabase();
+
+      const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+      expect(db.runs[0].runs).toHaveLength(3);
+      expect(db.version).toBe(2);
+
+      const backupPath = `${dbPath}.pre-compaction.bak`;
+      expect(fs.existsSync(backupPath)).toBe(true);
+      expect(JSON.parse(fs.readFileSync(backupPath, 'utf8')).runs[0].runs).toHaveLength(4);
+    });
+
+    it('does not overwrite an existing backup', async () => {
+      collection.root_path = tmpDir;
+      collection.workflow_instances = [makeInstance()];
+      const dbPath = seedInstanceDb([
+        { datetime: '2026-01-02T09:00:00Z', processes: [], pids: [], status: 'running' },
+        { datetime: '2026-01-02T09:00:05Z', processes: [], pids: [], status: 'running' }
+      ]);
+      const backupPath = `${dbPath}.pre-compaction.bak`;
+      fs.writeFileSync(backupPath, 'original');
+
+      await collection.parseInstanceDatabase();
+
+      expect(fs.readFileSync(backupPath, 'utf8')).toBe('original');
     });
 
     it('persists the pruned process list when some processes have died', async () => {
