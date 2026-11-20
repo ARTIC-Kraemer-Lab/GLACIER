@@ -14,6 +14,7 @@ import {
   ButtonGroup
 } from '@mui/material';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import { createDefaultValue } from '@jsonforms/core';
 import { JsonForms } from '@jsonforms/react';
 import Ajv from 'ajv'; // ajv is also used by jsonforms
 import addMetaSchema2020 from 'ajv/dist/refs/json-schema-2020-12/index.js';
@@ -114,6 +115,11 @@ export default function ParametersPage({
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingParamsRef = useRef<Record<string, unknown> | null>(null);
   const materializedRef = useRef<any>(null);
+  // Schema defaults, and whether JsonForms' initial default onChange is still
+  // outstanding. On a slow renderer that change can land after the user has
+  // started typing, so it must not overwrite the form.
+  const defaultsRef = useRef<Record<string, unknown> | null>(null);
+  const defaultChangePendingRef = useRef(false);
   const persistRef = useRef<(data: Record<string, unknown>) => void>(() => {});
   // Saves run in order, so a blur or unmount flush cannot overtake an earlier
   // debounced save and leave stale parameters on disk.
@@ -123,6 +129,18 @@ export default function ParametersPage({
     const copy = { ...data };
     delete copy['profile'];
     return copy;
+  };
+
+  // Whether a payload is just the schema defaults. Used to recognise the
+  // initial programmatic onChange from JsonForms when it arrives late.
+  const matchesDefaults = (data: Record<string, unknown>) => {
+    const defaults = defaultsRef.current;
+    if (!defaults) return false;
+    const keys = Object.keys(defaults);
+    return (
+      keys.length > 0 &&
+      keys.every((key) => JSON.stringify(data?.[key]) === JSON.stringify(defaults[key]))
+    );
   };
 
   // Save edits without waiting for a launch. When the workflow is still a
@@ -316,13 +334,24 @@ export default function ParametersPage({
           default: profiles.includes(defaultProfile) ? [defaultProfile] : []
         };
       }
+      // Apply schema defaults before the form becomes interactive. JsonForms
+      // otherwise emits a programmatic default change on mount, which can
+      // land after the user has started typing and replace their value.
+      // Preserve anything already loaded (or typed) by overlaying it on the
+      // defaults.
+      const defaults = createDefaultValue(schema, schema) ?? {};
+      defaultsRef.current = defaults;
+      defaultChangePendingRef.current = true;
+      setParams((prev) => ({ ...defaults, ...prev }));
       setSchema(schema);
     };
     const get_params = async () => {
       const paramsResult = await API.getWorkflowInstanceParams(instance);
       // Never clobber an edit made while the request was in flight.
       if (!userEditedRef.current && paramsResult.ok && paramsResult.data) {
-        setParams(paramsResult.data);
+        // Overlay the saved values on top of the defaults already in state;
+        // an empty draft response must not remove the schema defaults.
+        setParams((prev) => ({ ...prev, ...paramsResult.data }));
       }
     };
     const fetchReadme = async () => {
@@ -362,9 +391,14 @@ export default function ParametersPage({
     return Object.keys(obj).length === 0;
   };
 
-  // Build the UI schema with stepper options
-  const uischema = buildUISchema(schema, { showHidden: showHiddenParams });
-  (uischema as any).options = { variant: 'stepper', showNavButtons: true };
+  // Build the UI schema with stepper options. Memoise it so a new object is
+  // not handed to JsonForms on every render: during autosave/materialisation
+  // a new UI schema could make the form re-initialise while the user is typing.
+  const uischema = useMemo(() => {
+    const ui = buildUISchema(schema, { showHidden: showHiddenParams });
+    (ui as any).options = { variant: 'stepper', showNavButtons: true };
+    return ui;
+  }, [schema, showHiddenParams]);
 
   const computedErrors = useMemo(() => {
     if (!schema || isEmpty(schema)) return null;
@@ -376,6 +410,23 @@ export default function ParametersPage({
       return null;
     }
   }, [schema, params]);
+
+  const commitFormChange = (data: Record<string, unknown>) => {
+    // JsonForms emits the schema defaults once on mount. If that change
+    // arrives after the user has started editing (slow renderer / CI), ignore
+    // it instead of replacing their input. Keep waiting for it when the user's
+    // first edit arrives first, so a later default payload is still ignored.
+    if (defaultChangePendingRef.current && (!userInteractedRef.current || matchesDefaults(data))) {
+      defaultChangePendingRef.current = false;
+      return;
+    }
+    setParams(data);
+    // Ignore programmatic changes (e.g. schema defaults) so a previewed
+    // workflow is not materialised without an edit.
+    if (!userInteractedRef.current) return;
+    userEditedRef.current = true;
+    scheduleAutosave(data);
+  };
 
   const handleTabChange = (event, newValue) => {
     setTabSelected(newValue);
@@ -517,6 +568,7 @@ export default function ParametersPage({
                 }}
                 onKeyDownCapture={() => {
                   userInteractedRef.current = true;
+                  userEditedRef.current = true;
                 }}
                 onFocusCapture={() => {
                   userInteractedRef.current = true;
@@ -533,12 +585,7 @@ export default function ParametersPage({
                   data={params}
                   renderers={renderers}
                   onChange={({ data }) => {
-                    setParams(data);
-                    // Ignore programmatic changes (e.g. schema defaults) so a
-                    // previewed workflow is not materialised without an edit.
-                    if (!userInteractedRef.current) return;
-                    userEditedRef.current = true;
-                    scheduleAutosave(data);
+                    commitFormChange(data);
                   }}
                   ajv={ajv}
                 />
