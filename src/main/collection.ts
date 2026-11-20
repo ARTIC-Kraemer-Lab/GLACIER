@@ -1619,7 +1619,14 @@ export class Collection {
       const entries = safeFs.readdirSync(local_instance.path);
       if (entries.ok) {
         for (const entry of entries.data) {
-          if (entry === 'glacier-params.json') continue;
+          // Parameters are preserved, and `work/` is left in place: it is a task
+          // cache that the container runtime bind-mounts into task containers,
+          // and deleting it invalidates the runtime's mount paths for the
+          // recreated directories (Docker/OrbStack then fail to start the next
+          // task with "error while creating mount source path"). The work tree
+          // is keyed by task hash, so the re-run overwrites it, and removing
+          // `.nextflow/` below is what forces every task to execute again.
+          if (entry === 'glacier-params.json' || entry === 'work') continue;
           safeFs.rmSync(path.join(local_instance.path, entry), { recursive: true, force: true });
         }
       }

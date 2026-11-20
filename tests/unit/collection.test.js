@@ -1053,6 +1053,46 @@ describe('Collection', () => {
       expect(instance.status).toBe('created');
       expect(instance.processes).toEqual([]);
     });
+
+    it('keeps the task cache and parameters but clears the rest', async () => {
+      collection.root_path = tmpDir;
+      const instancePath = path.join(tmpDir, 'inst');
+      const workFile = path.join(instancePath, 'work', 'aa', 'task', 'output.txt');
+      fs.mkdirSync(path.dirname(workFile), { recursive: true });
+      fs.writeFileSync(workFile, 'cached output');
+      const nextflowDir = path.join(instancePath, '.nextflow');
+      fs.mkdirSync(nextflowDir, { recursive: true });
+      fs.writeFileSync(path.join(nextflowDir, 'cache'), 'cache');
+      fs.writeFileSync(path.join(instancePath, 'nextflow.log'), 'log');
+      fs.writeFileSync(path.join(instancePath, 'stdout.log'), 'stdout');
+      const paramsFile = path.join(instancePath, 'glacier-params.json');
+      fs.writeFileSync(paramsFile, '{}');
+
+      const instance = {
+        id: 'inst',
+        name: 'inst',
+        workflow_version: {},
+        path: instancePath,
+        processes: [],
+        status: 'failed',
+        setCachedProgress: vi.fn()
+      };
+      collection.workflow_instances = [instance];
+      fs.writeFileSync(
+        path.join(tmpDir, 'instances.json'),
+        JSON.stringify({ runs: [{ id: 'inst', name: 'inst', workflow: 'wf', runs: [] }] })
+      );
+
+      await collection.resetWorkflowInstanceStatus(instance);
+
+      // The container runtime bind-mounts work/, so it must survive the reset.
+      expect(fs.readFileSync(workFile, 'utf8')).toBe('cached output');
+      // Everything that makes it a fresh run is removed.
+      expect(fs.existsSync(nextflowDir)).toBe(false);
+      expect(fs.existsSync(path.join(instancePath, 'nextflow.log'))).toBe(false);
+      expect(fs.existsSync(path.join(instancePath, 'stdout.log'))).toBe(false);
+      expect(fs.existsSync(paramsFile)).toBe(true);
+    });
   });
 
   describe('getInstanceProgress', () => {
