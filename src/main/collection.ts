@@ -216,27 +216,61 @@ class WorkflowInstance implements IWorkflowInstance {
     this.processes.push(desc);
   }
 
-  async getProgress(): Promise<Record<string, any>> {
-    // Read the most recent nextflow.log (handles rotation: nextflow.log, nextflow.log.1, ...)
-    let logFile = path.join(this.path, 'nextflow.log');
-    if (fs.existsSync(this.path)) {
-      const candidates = fs
-        .readdirSync(this.path)
-        .filter((f) => f.startsWith('nextflow.log'))
-        .map((f) => ({
-          name: f,
-          mtime: fs.statSync(path.join(this.path, f)).mtimeMs
-        }))
-        .sort((a, b) => b.mtime - a.mtime);
-      if (candidates.length > 0) {
-        logFile = path.join(this.path, candidates[0].name);
+  /** Record when the current run was spawned, so stale logs can be ignored. */
+  markLaunched() {
+    this._launchedAt = Date.now();
+  }
+
+  /** True when the newest log predates the current run. */
+  hasStaleLog(): boolean {
+    if (this._launchedAt === null) return false;
+    const mtime = this.getProgressLogMtime();
+    return mtime !== null && mtime < this._launchedAt;
+  }
+
+  private _launchedAt: number | null = null;
+
+  /** Modification time of the newest nextflow log, or null when there is none. */
+  getProgressLogMtime(): number | null {
+    const logFile = this.newestLogFile();
+    if (!logFile) return null;
+    try {
+      return fs.statSync(logFile).mtimeMs;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Newest nextflow log (handles rotation: nextflow.log, nextflow.log.1, ...),
+   * or null when the instance has no log yet.
+   */
+  private newestLogFile(): string | null {
+    if (!fs.existsSync(this.path)) return null;
+    let newest: string | null = null;
+    let newestMtime = -1;
+    for (const entry of fs.readdirSync(this.path)) {
+      if (!entry.startsWith('nextflow.log')) continue;
+      try {
+        const mtime = fs.statSync(path.join(this.path, entry)).mtimeMs;
+        if (mtime > newestMtime) {
+          newestMtime = mtime;
+          newest = path.join(this.path, entry);
+        }
+      } catch {
+        /* file disappeared between readdir and stat */
       }
     }
-    if (fs.existsSync(logFile)) {
+    return newest;
+  }
+
+  async getProgress(): Promise<Record<string, any>> {
+    // Read the most recent nextflow.log (handles rotation: nextflow.log, nextflow.log.1, ...)
+    const logFile = this.newestLogFile();
+    if (logFile) {
       return await parseNextflowLog(logFile);
-    } else {
-      return { status: 'No log file found' };
     }
+    return { status: 'No log file found' };
   }
 
   async getStatus(): Promise<string> {
@@ -1338,7 +1372,11 @@ export class Collection {
     if (!local_instance) {
       throw new Error(`Instance ${instance.id} not found in collection.`);
     }
-    const progress = await local_instance.getProgress();
+    // Right after a launch the newest log can still belong to the previous run.
+    // Reporting its events would briefly show that run's terminal status (a
+    // resumed workflow appeared 'cancelled' for a poll interval), so report no
+    // events until the current run has written its own log.
+    const progress = local_instance.hasStaleLog() ? {} : await local_instance.getProgress();
     // The stored status is authoritative for explicit cancellations, which a
     // force-killed run never records in nextflow.log.
     return { ...progress, instance_status: local_instance.status };
@@ -1398,6 +1436,14 @@ export class Collection {
     const local_instance = this.workflow_instances.find((inst) => inst.id === instance.id);
     if (!local_instance) {
       throw new Error(`Instance ${instance.id} not found in collection.`);
+    }
+    // A launch or resume is followed immediately by a status poll. Until the new
+    // run has written to its log, the newest log still belongs to the previous
+    // run, so parsing it reports a stale status: a resumed workflow used to be
+    // recorded as 'cancelled' ~15ms after it started, and because terminal
+    // instances are not polled again the UI stayed wrong while nextflow ran on.
+    if (local_instance.hasStaleLog()) {
+      return local_instance.status;
     }
     const progress = await local_instance.getProgress();
     local_instance.setCachedProgress(progress);
@@ -2140,6 +2186,7 @@ export class Collection {
       throw new Error(`Failed to start workflow instance ${instance.id}.`);
     }
     local_instance.attachProcess(desc);
+    local_instance.markLaunched();
     this.recordRunWorkflow(instance);
     return desc;
   }
