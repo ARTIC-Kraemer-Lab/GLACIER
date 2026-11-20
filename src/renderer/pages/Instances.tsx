@@ -416,13 +416,20 @@ export default function InstancesPage({
     return () => clearInterval(timer);
   }, [item, refreshInstancesList]);
 
-  const onRestart = (instanceId: string) => {
-    setEditingInstance(instanceId);
-    setItem(instanceId);
+  // Reset before navigating so a slow wipe (large work/output trees) cannot
+  // still be running when the workflow is launched from the parameters screen.
+  const onRestart = async (instanceId: string) => {
     const entry = instancesList.find(({ name }) => name === instanceId);
     if (entry) {
-      API.resetWorkflowInstanceStatus(entry.instance);
+      try {
+        await API.resetWorkflowInstanceStatus(entry.instance);
+      } catch (err) {
+        logMessage(`Restart failed: ${err}`, 'error');
+        return;
+      }
     }
+    setEditingInstance(instanceId);
+    setItem(instanceId);
     refreshInstancesList();
   };
 

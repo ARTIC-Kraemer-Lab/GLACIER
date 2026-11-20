@@ -582,7 +582,8 @@ describe('Collection', () => {
         path: '',
         processes: [],
         status: 'created',
-        attachProcess: vi.fn()
+        attachProcess: vi.fn(),
+        markLaunched: vi.fn()
       };
       collection.workflow_instances = [instance];
       const spy = vi.spyOn(instance, 'attachProcess');
@@ -591,6 +592,7 @@ describe('Collection', () => {
 
       expect(desc.pid).toBe(999);
       expect(spy).toHaveBeenCalledWith(expect.objectContaining({ pid: 999 }));
+      expect(instance.markLaunched).toHaveBeenCalled();
     });
 
     it('throws if runner returns null PID', async () => {
@@ -789,6 +791,7 @@ describe('Collection', () => {
       status: 'completed',
       getProgress: vi.fn().mockResolvedValue({ workflow: [{ status: 'completed' }], group: [] }),
       setCachedProgress: vi.fn(),
+      hasStaleLog: () => false,
       getProgressPercent: () => 100,
       getLaunchTime: () => undefined,
       getLastUpdateTime: () => undefined,
@@ -835,6 +838,25 @@ describe('Collection', () => {
       expect(runs).toHaveLength(2);
       expect(runs[1].status).toBe('completed');
       expect(instance.status).toBe('completed');
+    });
+
+    it('keeps polling an instance that still has processes attached', async () => {
+      collection.root_path = tmpDir;
+      // A terminal status applied from a stale log would otherwise never be
+      // re-checked, leaving the UI stuck while the workflow is still running.
+      const instance = makePolledInstance({
+        status: 'cancelled',
+        processes: [{ pid: 4242, cmd: 'nextflow run' }]
+      });
+      collection.workflow_instances = [instance];
+      const dbPath = seedInstanceDb([
+        { datetime: '2026-01-02T09:00:00Z', processes: [], pids: [4242], status: 'cancelled' }
+      ]);
+
+      await collection.listWorkflowInstances();
+
+      expect(instance.status).toBe('completed');
+      expect(readInstanceRuns(dbPath).at(-1).status).toBe('completed');
     });
   });
 
@@ -1053,6 +1075,46 @@ describe('Collection', () => {
       expect(instance.status).toBe('created');
       expect(instance.processes).toEqual([]);
     });
+
+    it('keeps the task cache and parameters but clears the rest', async () => {
+      collection.root_path = tmpDir;
+      const instancePath = path.join(tmpDir, 'inst');
+      const workFile = path.join(instancePath, 'work', 'aa', 'task', 'output.txt');
+      fs.mkdirSync(path.dirname(workFile), { recursive: true });
+      fs.writeFileSync(workFile, 'cached output');
+      const nextflowDir = path.join(instancePath, '.nextflow');
+      fs.mkdirSync(nextflowDir, { recursive: true });
+      fs.writeFileSync(path.join(nextflowDir, 'cache'), 'cache');
+      fs.writeFileSync(path.join(instancePath, 'nextflow.log'), 'log');
+      fs.writeFileSync(path.join(instancePath, 'stdout.log'), 'stdout');
+      const paramsFile = path.join(instancePath, 'glacier-params.json');
+      fs.writeFileSync(paramsFile, '{}');
+
+      const instance = {
+        id: 'inst',
+        name: 'inst',
+        workflow_version: {},
+        path: instancePath,
+        processes: [],
+        status: 'failed',
+        setCachedProgress: vi.fn()
+      };
+      collection.workflow_instances = [instance];
+      fs.writeFileSync(
+        path.join(tmpDir, 'instances.json'),
+        JSON.stringify({ runs: [{ id: 'inst', name: 'inst', workflow: 'wf', runs: [] }] })
+      );
+
+      await collection.resetWorkflowInstanceStatus(instance);
+
+      // The container runtime bind-mounts work/, so it must survive the reset.
+      expect(fs.readFileSync(workFile, 'utf8')).toBe('cached output');
+      // Everything that makes it a fresh run is removed.
+      expect(fs.existsSync(nextflowDir)).toBe(false);
+      expect(fs.existsSync(path.join(instancePath, 'nextflow.log'))).toBe(false);
+      expect(fs.existsSync(path.join(instancePath, 'stdout.log'))).toBe(false);
+      expect(fs.existsSync(paramsFile)).toBe(true);
+    });
   });
 
   describe('getInstanceProgress', () => {
@@ -1061,13 +1123,30 @@ describe('Collection', () => {
       const instance = {
         id: 'test',
         status: 'running',
-        getProgress: vi.fn().mockResolvedValue(progress)
+        getProgress: vi.fn().mockResolvedValue(progress),
+        hasStaleLog: () => false
       };
       collection.workflow_instances = [instance];
 
       const result = await collection.getInstanceProgress(instance);
 
       expect(result).toEqual({ ...progress, instance_status: 'running' });
+    });
+
+    it('reports no events while the newest log belongs to the previous run', async () => {
+      const instance = {
+        id: 'test',
+        status: 'running',
+        getProgress: vi.fn(),
+        hasStaleLog: () => true
+      };
+      collection.workflow_instances = [instance];
+
+      const result = await collection.getInstanceProgress(instance);
+
+      // A resumed run must not show the previous run's terminal status.
+      expect(result).toEqual({ instance_status: 'running' });
+      expect(instance.getProgress).not.toHaveBeenCalled();
     });
 
     it('throws for unknown instance', async () => {
@@ -1207,7 +1286,8 @@ describe('Collection', () => {
         path: '/x',
         processes: [],
         getProgress: vi.fn().mockResolvedValue({ workflow: [], group: [] }),
-        setCachedProgress: vi.fn()
+        setCachedProgress: vi.fn(),
+        hasStaleLog: () => false
       };
       collection.workflow_instances = [instance];
 
@@ -1226,13 +1306,76 @@ describe('Collection', () => {
           workflow: [{ status: 'completed' }],
           group: []
         }),
-        setCachedProgress: vi.fn()
+        setCachedProgress: vi.fn(),
+        hasStaleLog: () => false
       };
       collection.workflow_instances = [instance];
 
       const status = await collection.updateWorkflowInstanceStatus(instance);
 
       expect(status).toBe('completed');
+    });
+
+    describe('stale log after a launch', () => {
+      let instance;
+
+      beforeEach(async () => {
+        collection.documents_root_path = tmpDir;
+        collection.workflows = [makeWorkflow()];
+        vi.mocked(repo.generateUniqueName).mockReturnValue('stale-otter');
+        vi.mocked(repo.getWorkflowSchema).mockResolvedValue({});
+        instance = await collection.createWorkflowInstance('owner/repo', 'v1.0');
+        instance.status = 'running';
+      });
+
+      it('keeps the current status while the newest log belongs to the previous run', async () => {
+        const logFile = path.join(instance.path, 'nextflow.log');
+        fs.writeFileSync(logFile, 'previous session');
+        const past = new Date(Date.now() - 60_000);
+        fs.utimesSync(logFile, past, past);
+
+        instance.markLaunched();
+        const progressSpy = vi.spyOn(instance, 'getProgress');
+
+        const status = await collection.updateWorkflowInstanceStatus(instance);
+
+        // The previous run's log says 'cancelled'; it must not be applied.
+        expect(status).toBe('running');
+        expect(progressSpy).not.toHaveBeenCalled();
+      });
+
+      it('parses the log once the current run has written to it', async () => {
+        const logFile = path.join(instance.path, 'nextflow.log');
+        fs.writeFileSync(logFile, 'current session');
+        const future = new Date(Date.now() + 60_000);
+        fs.utimesSync(logFile, future, future);
+
+        instance.markLaunched();
+        vi.spyOn(instance, 'getProgress').mockResolvedValue({
+          workflow: [{ status: 'completed' }],
+          group: []
+        });
+
+        const status = await collection.updateWorkflowInstanceStatus(instance);
+
+        expect(status).toBe('completed');
+      });
+
+      it('does not guard instances that were never launched in this session', async () => {
+        const logFile = path.join(instance.path, 'nextflow.log');
+        fs.writeFileSync(logFile, 'previous session');
+        const past = new Date(Date.now() - 60_000);
+        fs.utimesSync(logFile, past, past);
+
+        vi.spyOn(instance, 'getProgress').mockResolvedValue({
+          workflow: [{ status: 'cancelled' }],
+          group: []
+        });
+
+        const status = await collection.updateWorkflowInstanceStatus(instance);
+
+        expect(status).toBe('cancelled');
+      });
     });
   });
 
