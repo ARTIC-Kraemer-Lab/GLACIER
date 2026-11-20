@@ -25,6 +25,12 @@ const RES = [
     t: 'submitted' as const,
     re: /\[(\w+\/[0-9A-Fa-f]+)\]\s+Submitted process > ([^\s]+(?: \(.+\))?)/
   },
+  // A resumed run recovers tasks from the cache instead of re-executing them:
+  // [ab/123456] Cached process > PROC (tag)
+  {
+    t: 'cached' as const,
+    re: /\[(\w+\/[0-9A-Fa-f]+)\]\s+Cached process > ([^\s]+(?: \(.+\))?)/
+  },
   // Task completed > ... name: <proc>; status: <STATUS>;
   { t: 'completed' as const, re: /Task completed > .*?name:\s*([^;]+);\s*status:\s*([A-Z]+);/ },
   { t: 'error' as const, re: /Error executing process > '([^']+)'/ },
@@ -154,6 +160,24 @@ export async function readNextflowLog(logFilePath: string) {
           });
           obj.last_update = last_update;
           break;
+        case 'cached': {
+          // Nextflow reuses a task's original work directory, so the cached
+          // entry can carry the same work folder (for the log viewer) and
+          // last-update time as an executed task.
+          const obj = addProcess(progress, m[2]);
+          const work = m[1];
+          const last_update = await lastUpdateTime(root_path, work, 'log');
+          obj.process.push({
+            time: ts,
+            full_name: m[2].replace(/\s*\(.*\)$/, ''),
+            status: 'completed',
+            cached: true,
+            work: last_update ? work : undefined,
+            last_update: last_update
+          });
+          if (last_update) obj.last_update = last_update;
+          break;
+        }
         case 'completed':
           addProcess(progress, process_label).process.push({
             time: ts,

@@ -282,6 +282,8 @@
       "search": "Search processes...",
       "no-search-results": "No processes match your search",
       "stopped": "Stopped",
+      "cached": "Cached",
+      "cached-tooltip": "Result reused from a previous run; this process was not re-executed.",
       "collapse-all": "Collapse all",
       "expand-all": "Expand all"
     },
