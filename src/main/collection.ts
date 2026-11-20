@@ -1627,6 +1627,10 @@ export class Collection {
     local_instance.status = WorkflowStatus.Created;
     local_instance.processes = [];
     local_instance.setCachedProgress(null);
+    // Persist the reset. Without a record the previous terminal status is
+    // restored on the next startup, and a missing nextflow.log is then reported
+    // as 'running', leaving the instance stuck with a bogus elapsed timer.
+    this.recordRunWorkflow(local_instance, WorkflowStatus.Created);
   }
 
   /**

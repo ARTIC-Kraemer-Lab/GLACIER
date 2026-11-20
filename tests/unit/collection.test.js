@@ -1016,6 +1016,45 @@ describe('Collection', () => {
     });
   });
 
+  describe('resetWorkflowInstanceStatus', () => {
+    it('persists the reset so the previous status is not restored', async () => {
+      collection.root_path = tmpDir;
+      const instance = {
+        id: 'inst',
+        name: 'inst',
+        workflow_version: {},
+        path: tmpDir,
+        processes: [{ pid: 100 }],
+        status: 'failed',
+        setCachedProgress: vi.fn()
+      };
+      collection.workflow_instances = [instance];
+      const dbPath = path.join(tmpDir, 'instances.json');
+      fs.writeFileSync(
+        dbPath,
+        JSON.stringify({
+          runs: [
+            {
+              id: 'inst',
+              name: 'inst',
+              workflow: 'wf',
+              runs: [
+                { datetime: '2026-01-02T09:00:00Z', processes: [], pids: [], status: 'failed' }
+              ]
+            }
+          ]
+        })
+      );
+
+      await collection.resetWorkflowInstanceStatus(instance);
+
+      const runs = JSON.parse(fs.readFileSync(dbPath, 'utf8')).runs[0].runs;
+      expect(runs[runs.length - 1].status).toBe('created');
+      expect(instance.status).toBe('created');
+      expect(instance.processes).toEqual([]);
+    });
+  });
+
   describe('getInstanceProgress', () => {
     it('delegates to instance.getProgress and exposes the stored status', async () => {
       const progress = { workflow: [{ status: 'completed' }], group: [] };
