@@ -1322,7 +1322,11 @@ export class Collection {
       if (
         instance.status === WorkflowStatus.Running ||
         instance.status === WorkflowStatus.Completed ||
-        instance.status === WorkflowStatus.Failed
+        instance.status === WorkflowStatus.Failed ||
+        // Keep polling while processes are attached even if the recorded status
+        // is terminal, so a status that was applied from a stale log can be
+        // corrected on the next poll instead of sticking for ever.
+        instance.processes.length > 0
       ) {
         const updatePromise = this.updateWorkflowInstanceStatus(instance).then((status) => {
           // Recording on every poll grew instances.json without bound: the list

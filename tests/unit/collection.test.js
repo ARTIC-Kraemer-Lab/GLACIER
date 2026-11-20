@@ -839,6 +839,25 @@ describe('Collection', () => {
       expect(runs[1].status).toBe('completed');
       expect(instance.status).toBe('completed');
     });
+
+    it('keeps polling an instance that still has processes attached', async () => {
+      collection.root_path = tmpDir;
+      // A terminal status applied from a stale log would otherwise never be
+      // re-checked, leaving the UI stuck while the workflow is still running.
+      const instance = makePolledInstance({
+        status: 'cancelled',
+        processes: [{ pid: 4242, cmd: 'nextflow run' }]
+      });
+      collection.workflow_instances = [instance];
+      const dbPath = seedInstanceDb([
+        { datetime: '2026-01-02T09:00:00Z', processes: [], pids: [4242], status: 'cancelled' }
+      ]);
+
+      await collection.listWorkflowInstances();
+
+      expect(instance.status).toBe('completed');
+      expect(readInstanceRuns(dbPath).at(-1).status).toBe('completed');
+    });
   });
 
   describe('compactRunEntries', () => {
