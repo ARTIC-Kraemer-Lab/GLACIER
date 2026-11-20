@@ -485,6 +485,79 @@ describe('Collection', () => {
       expect(instance.getLaunchTime(db)).toBe('2025-12-31T08:00:00Z');
     });
 
+    it('reports the latest launch after a restart while running', () => {
+      const db = dbWith([
+        { datetime: '2026-01-01T10:00:00Z', status: 'created', pids: [], processes: [] },
+        { datetime: '2026-01-02T09:00:00Z', status: 'running', pids: [123], processes: [] },
+        { datetime: '2026-01-02T09:00:05Z', status: 'running', pids: [123], processes: [] },
+        { datetime: '2026-01-02T09:10:00Z', status: 'completed', pids: [], processes: [] },
+        { datetime: '2026-01-02T09:30:00Z', status: 'cancelled', pids: [], processes: [] },
+        { datetime: '2026-01-02T09:31:00Z', status: 'running', pids: [456], processes: [] },
+        { datetime: '2026-01-02T09:31:05Z', status: 'running', pids: [456], processes: [] }
+      ]);
+      expect(instance.getLaunchTime(db)).toBe('2026-01-02T09:31:00Z');
+    });
+
+    it('reports the launch of the latest run after restarting a failed run', () => {
+      const db = dbWith([
+        { datetime: '2026-01-01T10:00:00Z', status: 'created' },
+        { datetime: '2026-01-02T09:00:00Z', status: 'running', pids: [123] },
+        { datetime: '2026-01-02T09:10:00Z', status: 'failed', pids: [] },
+        { datetime: '2026-01-02T09:20:00Z', status: 'running', pids: [789] },
+        { datetime: '2026-01-02T09:40:00Z', status: 'failed', pids: [] }
+      ]);
+      expect(instance.getLaunchTime(db)).toBe('2026-01-02T09:20:00Z');
+    });
+
+    it('reports the launch of the last of several runs', () => {
+      const db = dbWith([
+        { datetime: '2026-01-01T10:00:00Z', status: 'created' },
+        { datetime: '2026-01-02T09:00:00Z', status: 'running' },
+        { datetime: '2026-01-02T09:10:00Z', status: 'completed' },
+        { datetime: '2026-01-03T09:00:00Z', status: 'running' },
+        { datetime: '2026-01-03T09:10:00Z', status: 'completed' },
+        { datetime: '2026-01-04T09:00:00Z', status: 'running' },
+        { datetime: '2026-01-04T09:10:00Z', status: 'completed' }
+      ]);
+      expect(instance.getLaunchTime(db)).toBe('2026-01-04T09:00:00Z');
+    });
+
+    it('reports the launch when a reset follows the last run', () => {
+      const db = dbWith([
+        { datetime: '2026-01-02T09:00:00Z', status: 'running' },
+        { datetime: '2026-01-02T09:10:00Z', status: 'completed' },
+        { datetime: '2026-01-02T09:20:00Z', status: 'created' }
+      ]);
+      expect(instance.getLaunchTime(db)).toBe('2026-01-02T09:00:00Z');
+    });
+
+    it('exposes the latest launch through listWorkflowInstances', async () => {
+      collection.root_path = tmpDir;
+      instance.status = 'running';
+      instance.getProgress = vi
+        .fn()
+        .mockResolvedValue({ workflow: [{ status: 'running' }], group: [] });
+      fs.writeFileSync(
+        path.join(tmpDir, 'instances.json'),
+        JSON.stringify(
+          dbWith([
+            { datetime: '2026-01-01T10:00:00Z', status: 'created', pids: [], processes: [] },
+            { datetime: '2026-01-02T09:00:00Z', status: 'running', pids: [123], processes: [] },
+            { datetime: '2026-01-02T09:00:05Z', status: 'running', pids: [123], processes: [] },
+            { datetime: '2026-01-02T09:10:00Z', status: 'completed', pids: [], processes: [] },
+            { datetime: '2026-01-02T09:30:00Z', status: 'cancelled', pids: [], processes: [] },
+            { datetime: '2026-01-02T09:31:00Z', status: 'running', pids: [456], processes: [] },
+            { datetime: '2026-01-02T09:31:05Z', status: 'running', pids: [456], processes: [] }
+          ])
+        )
+      );
+
+      await collection.listWorkflowInstances();
+
+      // Elapsed time is measured from the restart, not the original launch.
+      expect(instance.launch_time).toBe('2026-01-02T09:31:00Z');
+    });
+
     it('returns undefined when the instance has no records', () => {
       expect(instance.getLaunchTime(undefined)).toBeUndefined();
       expect(instance.getLaunchTime({ runs: [] })).toBeUndefined();

@@ -255,11 +255,21 @@ class WorkflowInstance implements IWorkflowInstance {
   getLaunchTime(instanceDb: any): string | undefined {
     if (!instanceDb?.runs) return undefined;
     const run = instanceDb.runs.find((r: any) => r.id === this.id);
-    if (!run?.runs?.length) return undefined;
+    const entries: any[] = run?.runs;
+    if (!entries?.length) return undefined;
+    // A run is recorded as a contiguous block of 'running' entries: one when the
+    // workflow is launched, then one per status poll until it terminates.
+    // Elapsed time is relative to the *latest* run, so walk backwards to the
+    // start of the newest block rather than reporting the first launch.
+    for (let i = entries.length - 1; i >= 0; i--) {
+      if (entries[i]?.status === 'running' && entries[i - 1]?.status !== 'running') {
+        return entries[i].datetime || undefined;
+      }
+    }
     // The initial 'created' record is not a launch. Legacy databases have no
     // status field on run entries, so anything not explicitly 'created' is
     // treated as a launch.
-    const launch = run.runs.find((e: any) => e.status !== 'created');
+    const launch = entries.find((e: any) => e?.status !== 'created');
     return launch?.datetime || undefined;
   }
 
