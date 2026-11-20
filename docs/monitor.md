@@ -22,7 +22,7 @@ The Progress tab shows a tree view of the pipeline's processes, organised by gro
 
 Each process node displays:
 
-- **Status icon** — pending (grey), submitted (blue), completed (green), or error (red).
+- **Status icon** — pending (grey), submitted (blue), completed (green), or error (red). Processes recovered from a previous run by **Resume** are marked **Cached**: they keep the green tick and carry a *Cached* chip, because Nextflow reused their results instead of re-executing them.
 - **Name** — the process name from the Nextflow workflow.
 - **Progress bar** — for processes with multiple tasks, shows completion percentage.
 

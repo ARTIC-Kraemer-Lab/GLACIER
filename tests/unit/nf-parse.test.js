@@ -138,6 +138,80 @@ describe('nf-parse', () => {
     });
   });
 
+  describe('cached event', () => {
+    it('marks a cached process as completed and keeps its work folder', async () => {
+      createWorkDir('ab/123456');
+      const content = '2024-01-01 12:00:00.123 [ab/123456] Cached process > foo\n';
+      const logPath = createLogFile(content);
+      const result = await parseNextflowLog(logPath);
+
+      const entry = result.group[0].process[0];
+      expect(result.group[0].name).toBe('foo');
+      expect(entry.status).toBe('completed');
+      expect(entry.cached).toBe(true);
+      expect(entry.work).toBe('ab/123456');
+      expect(entry.last_update).toBeTruthy();
+    });
+
+    it('strips the tag from full_name, creating a subgroup', async () => {
+      createWorkDir('ab/123456');
+      const content = '2024-01-01 12:00:00.123 [ab/123456] Cached process > foo (2)\n';
+      const logPath = createLogFile(content);
+      const result = await parseNextflowLog(logPath);
+
+      expect(result.group[0].name).toBe('foo');
+      expect(result.group[0].group).toHaveLength(1);
+      expect(result.group[0].group[0].name).toBe('2');
+      const entry = result.group[0].group[0].process[0];
+      expect(entry.full_name).toBe('foo');
+      expect(entry.status).toBe('completed');
+      expect(entry.cached).toBe(true);
+    });
+
+    it('leaves a cached process completed after the resume preamble', async () => {
+      createWorkDir('ab/123456');
+      const content = [
+        "2024-01-01 12:00:00.123 Creating process 'foo'",
+        '2024-01-01 12:00:01.123 Starting process > foo',
+        '2024-01-01 12:00:02.123 [ab/123456] Cached process > foo'
+      ].join('\n');
+      const logPath = createLogFile(content);
+      const result = await parseNextflowLog(logPath);
+
+      const entries = result.group[0].process;
+      expect(entries[entries.length - 1].status).toBe('completed');
+      expect(entries[entries.length - 1].cached).toBe(true);
+    });
+
+    it('lets a later completed event override the cached status', async () => {
+      createWorkDir('ab/123456');
+      const content = [
+        '2024-01-01 12:00:00.123 [ab/123456] Cached process > foo',
+        '2024-01-01 12:00:01.123 Task completed > name: foo; status: COMPLETED;'
+      ].join('\n');
+      const logPath = createLogFile(content);
+      const result = await parseNextflowLog(logPath);
+
+      const entries = result.group[0].process;
+      expect(entries).toHaveLength(2);
+      expect(entries[entries.length - 1].status).toBe('completed');
+      expect(entries[entries.length - 1].cached).toBeUndefined();
+    });
+
+    it('omits the work folder when it no longer exists', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const content = '2024-01-01 12:00:00.123 [zz/abcdef] Cached process > foo\n';
+      const logPath = createLogFile(content);
+      const result = await parseNextflowLog(logPath);
+      warn.mockRestore();
+
+      const entry = result.group[0].process[0];
+      expect(entry.status).toBe('completed');
+      expect(entry.work).toBeUndefined();
+      expect(entry.last_update).toBeUndefined();
+    });
+  });
+
   describe('error event', () => {
     it('adds a process with error status', async () => {
       const content = "2024-01-01 12:00:00.123 Error executing process > 'foo'\n";

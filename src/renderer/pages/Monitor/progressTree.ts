@@ -19,6 +19,7 @@ export type TreeItemData = {
   exitStatus?: string;
   commandError?: string;
   cause?: string;
+  cached?: boolean;
 };
 
 export const isFinished = (status: ProcessStatus) =>
@@ -71,7 +72,8 @@ export const addGroup = (
     work_folder: undefined,
     exitStatus: undefined,
     commandError: undefined,
-    cause: undefined
+    cause: undefined,
+    cached: undefined
   });
   const item = parent[parent.length - 1];
   if (group?.group?.length) {
@@ -82,6 +84,7 @@ export const addGroup = (
   if (group?.process?.length > 0) {
     const lastProcess = group.process[group.process.length - 1];
     item.status = lastProcess.status;
+    item.cached = lastProcess.cached === true;
     if (lastProcess.status === 'error') {
       item.exitStatus = lastProcess.exitStatus;
       item.commandError = lastProcess.commandError;

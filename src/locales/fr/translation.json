@@ -276,6 +276,8 @@
       "search": "Rechercher des processus...",
       "no-search-results": "Aucun processus ne correspond à votre recherche",
       "stopped": "Arrêté",
+      "cached": "En cache",
+      "cached-tooltip": "Résultat réutilisé d'une exécution précédente ; le processus n'a pas été réexécuté.",
       "collapse-all": "Tout réduire",
       "expand-all": "Tout développer"
     },

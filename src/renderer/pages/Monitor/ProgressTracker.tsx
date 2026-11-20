@@ -111,6 +111,7 @@ interface CustomLabelProps {
   exitStatus?: string;
   commandError?: string;
   cause?: string;
+  cached?: boolean;
 }
 
 function CustomLabel({
@@ -124,7 +125,8 @@ function CustomLabel({
   work_folder,
   exitStatus,
   commandError,
-  cause
+  cause,
+  cached
 }: CustomLabelProps) {
   const { t } = useTranslation();
   const [showLog, setShowLog] = useState(false);
@@ -192,6 +194,17 @@ function CustomLabel({
         >
           {children}
         </Typography>
+
+        {cached && status === ProcessStatus.Completed && (
+          <Tooltip title={t('monitor.progress.cached-tooltip')}>
+            <Chip
+              label={t('monitor.progress.cached')}
+              size="small"
+              variant="outlined"
+              sx={{ height: 18, fontSize: '0.65rem', flexShrink: 0 }}
+            />
+          </Tooltip>
+        )}
 
         {last_update && (
           <Typography variant="caption" sx={{ color: 'text.secondary', flexShrink: 0 }}>
@@ -362,7 +375,8 @@ const CustomTreeItem = React.forwardRef(function CustomTreeItem(
           work_folder: item?.work_folder,
           exitStatus: item?.exitStatus,
           commandError: item?.commandError,
-          cause: item?.cause
+          cause: item?.cause,
+          cached: item?.cached
         } as CustomLabelProps
       }}
     />
