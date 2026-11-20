@@ -485,6 +485,79 @@ describe('Collection', () => {
       expect(instance.getLaunchTime(db)).toBe('2025-12-31T08:00:00Z');
     });
 
+    it('reports the latest launch after a restart while running', () => {
+      const db = dbWith([
+        { datetime: '2026-01-01T10:00:00Z', status: 'created', pids: [], processes: [] },
+        { datetime: '2026-01-02T09:00:00Z', status: 'running', pids: [123], processes: [] },
+        { datetime: '2026-01-02T09:00:05Z', status: 'running', pids: [123], processes: [] },
+        { datetime: '2026-01-02T09:10:00Z', status: 'completed', pids: [], processes: [] },
+        { datetime: '2026-01-02T09:30:00Z', status: 'cancelled', pids: [], processes: [] },
+        { datetime: '2026-01-02T09:31:00Z', status: 'running', pids: [456], processes: [] },
+        { datetime: '2026-01-02T09:31:05Z', status: 'running', pids: [456], processes: [] }
+      ]);
+      expect(instance.getLaunchTime(db)).toBe('2026-01-02T09:31:00Z');
+    });
+
+    it('reports the launch of the latest run after restarting a failed run', () => {
+      const db = dbWith([
+        { datetime: '2026-01-01T10:00:00Z', status: 'created' },
+        { datetime: '2026-01-02T09:00:00Z', status: 'running', pids: [123] },
+        { datetime: '2026-01-02T09:10:00Z', status: 'failed', pids: [] },
+        { datetime: '2026-01-02T09:20:00Z', status: 'running', pids: [789] },
+        { datetime: '2026-01-02T09:40:00Z', status: 'failed', pids: [] }
+      ]);
+      expect(instance.getLaunchTime(db)).toBe('2026-01-02T09:20:00Z');
+    });
+
+    it('reports the launch of the last of several runs', () => {
+      const db = dbWith([
+        { datetime: '2026-01-01T10:00:00Z', status: 'created' },
+        { datetime: '2026-01-02T09:00:00Z', status: 'running' },
+        { datetime: '2026-01-02T09:10:00Z', status: 'completed' },
+        { datetime: '2026-01-03T09:00:00Z', status: 'running' },
+        { datetime: '2026-01-03T09:10:00Z', status: 'completed' },
+        { datetime: '2026-01-04T09:00:00Z', status: 'running' },
+        { datetime: '2026-01-04T09:10:00Z', status: 'completed' }
+      ]);
+      expect(instance.getLaunchTime(db)).toBe('2026-01-04T09:00:00Z');
+    });
+
+    it('reports the launch when a reset follows the last run', () => {
+      const db = dbWith([
+        { datetime: '2026-01-02T09:00:00Z', status: 'running' },
+        { datetime: '2026-01-02T09:10:00Z', status: 'completed' },
+        { datetime: '2026-01-02T09:20:00Z', status: 'created' }
+      ]);
+      expect(instance.getLaunchTime(db)).toBe('2026-01-02T09:00:00Z');
+    });
+
+    it('exposes the latest launch through listWorkflowInstances', async () => {
+      collection.root_path = tmpDir;
+      instance.status = 'running';
+      instance.getProgress = vi
+        .fn()
+        .mockResolvedValue({ workflow: [{ status: 'running' }], group: [] });
+      fs.writeFileSync(
+        path.join(tmpDir, 'instances.json'),
+        JSON.stringify(
+          dbWith([
+            { datetime: '2026-01-01T10:00:00Z', status: 'created', pids: [], processes: [] },
+            { datetime: '2026-01-02T09:00:00Z', status: 'running', pids: [123], processes: [] },
+            { datetime: '2026-01-02T09:00:05Z', status: 'running', pids: [123], processes: [] },
+            { datetime: '2026-01-02T09:10:00Z', status: 'completed', pids: [], processes: [] },
+            { datetime: '2026-01-02T09:30:00Z', status: 'cancelled', pids: [], processes: [] },
+            { datetime: '2026-01-02T09:31:00Z', status: 'running', pids: [456], processes: [] },
+            { datetime: '2026-01-02T09:31:05Z', status: 'running', pids: [456], processes: [] }
+          ])
+        )
+      );
+
+      await collection.listWorkflowInstances();
+
+      // Elapsed time is measured from the restart, not the original launch.
+      expect(instance.launch_time).toBe('2026-01-02T09:31:00Z');
+    });
+
     it('returns undefined when the instance has no records', () => {
       expect(instance.getLaunchTime(undefined)).toBeUndefined();
       expect(instance.getLaunchTime({ runs: [] })).toBeUndefined();
@@ -703,6 +776,282 @@ describe('Collection', () => {
       const result = await collection.listWorkflowInstances();
 
       expect(result).toHaveLength(2);
+    });
+
+    // The Instances list view polls this every 5 seconds, so anything recorded
+    // per call grows instances.json without bound.
+    const makePolledInstance = (opts = {}) => ({
+      id: 'polled',
+      name: 'polled',
+      workflow_version: {},
+      path: tmpDir,
+      processes: [],
+      status: 'completed',
+      getProgress: vi.fn().mockResolvedValue({ workflow: [{ status: 'completed' }], group: [] }),
+      setCachedProgress: vi.fn(),
+      getProgressPercent: () => 100,
+      getLaunchTime: () => undefined,
+      getLastUpdateTime: () => undefined,
+      ...opts
+    });
+
+    const seedInstanceDb = (runs) => {
+      const dbPath = path.join(tmpDir, 'instances.json');
+      fs.writeFileSync(
+        dbPath,
+        JSON.stringify({ runs: [{ id: 'polled', name: 'polled', workflow: 'wf', runs }] })
+      );
+      return dbPath;
+    };
+
+    const readInstanceRuns = (dbPath) => JSON.parse(fs.readFileSync(dbPath, 'utf8')).runs[0].runs;
+
+    it('does not append a record when the status is unchanged', async () => {
+      collection.root_path = tmpDir;
+      collection.workflow_instances = [makePolledInstance()];
+      const dbPath = seedInstanceDb([
+        { datetime: '2026-01-02T09:00:00Z', processes: [], pids: [], status: 'completed' }
+      ]);
+
+      await collection.listWorkflowInstances();
+      await collection.listWorkflowInstances();
+      await collection.listWorkflowInstances();
+
+      expect(readInstanceRuns(dbPath)).toHaveLength(1);
+    });
+
+    it('appends exactly one record per status transition', async () => {
+      collection.root_path = tmpDir;
+      const instance = makePolledInstance({ status: 'running' });
+      collection.workflow_instances = [instance];
+      const dbPath = seedInstanceDb([
+        { datetime: '2026-01-02T09:00:00Z', processes: [], pids: [], status: 'running' }
+      ]);
+
+      await collection.listWorkflowInstances();
+      await collection.listWorkflowInstances();
+
+      const runs = readInstanceRuns(dbPath);
+      expect(runs).toHaveLength(2);
+      expect(runs[1].status).toBe('completed');
+      expect(instance.status).toBe('completed');
+    });
+  });
+
+  describe('compactRunEntries', () => {
+    const makeDb = (runs) => ({ runs: [{ id: 'inst', name: 'inst', workflow: 'wf', runs }] });
+    const pollRecords = (n, status, datetime, pids = []) =>
+      Array.from({ length: n }, () => ({ datetime, processes: [], pids, status }));
+
+    it('collapses the records written by status polling', () => {
+      const db = makeDb([
+        { datetime: '2026-01-01T10:00:00Z', processes: [], pids: [], status: 'created' },
+        { datetime: '2026-01-02T09:00:00Z', processes: [], pids: [123], status: 'running' },
+        ...pollRecords(240, 'running', '2026-01-02T09:00:05Z', [123]),
+        { datetime: '2026-01-02T09:10:00Z', processes: [], pids: [], status: 'completed' },
+        ...pollRecords(60, 'completed', '2026-01-02T09:10:05Z'),
+        { datetime: '2026-01-02T09:30:00Z', processes: [], pids: [], status: 'cancelled' },
+        { datetime: '2026-01-02T09:31:00Z', processes: [], pids: [456], status: 'running' },
+        ...pollRecords(60, 'running', '2026-01-02T09:31:05Z', [456])
+      ]);
+
+      expect(collection.compactRunEntries(db)).toBe(true);
+
+      const runs = db.runs[0].runs;
+      expect(runs.map((r) => r.status)).toEqual([
+        'created',
+        'running',
+        'completed',
+        'cancelled',
+        'running'
+      ]);
+      // Block timestamps are kept, so launch detection still works.
+      expect(runs[1].datetime).toBe('2026-01-02T09:00:00Z');
+      expect(runs[4].datetime).toBe('2026-01-02T09:31:00Z');
+      // The most recent process snapshot is retained.
+      expect(runs[4].pids).toEqual([456]);
+    });
+
+    it('never merges records without a status', () => {
+      const db = makeDb([
+        { datetime: '2025-12-31T08:00:00Z', pids: [42] },
+        { datetime: '2025-12-31T09:00:00Z', pids: [42] }
+      ]);
+
+      expect(collection.compactRunEntries(db)).toBe(false);
+      expect(db.runs[0].runs).toHaveLength(2);
+    });
+
+    it('never merges records that differ in another field', () => {
+      const db = makeDb([
+        { datetime: '2026-01-02T09:00:00Z', pids: [], status: 'running', reason: 'a' },
+        { datetime: '2026-01-02T09:00:05Z', pids: [], status: 'running', reason: 'b' }
+      ]);
+
+      expect(collection.compactRunEntries(db)).toBe(false);
+      expect(db.runs[0].runs).toHaveLength(2);
+    });
+
+    it('keeps legacy pid-only records alongside modern ones', () => {
+      const db = makeDb([
+        { datetime: '2025-12-31T08:00:00Z', pids: [42] },
+        { datetime: '2026-01-02T09:00:00Z', pids: [123], status: 'running' },
+        { datetime: '2026-01-02T09:00:05Z', pids: [123], status: 'running' }
+      ]);
+
+      expect(collection.compactRunEntries(db)).toBe(true);
+      expect(db.runs[0].runs).toEqual([
+        { datetime: '2025-12-31T08:00:00Z', pids: [42] },
+        { datetime: '2026-01-02T09:00:00Z', pids: [123], status: 'running' }
+      ]);
+    });
+
+    it('is idempotent and records the schema version', () => {
+      const db = makeDb([
+        { datetime: '2026-01-02T09:00:00Z', pids: [], status: 'running' },
+        { datetime: '2026-01-02T09:00:05Z', pids: [], status: 'running' }
+      ]);
+
+      expect(collection.compactRunEntries(db)).toBe(true);
+      expect(db.version).toBe(2);
+      expect(collection.compactRunEntries(db)).toBe(false);
+    });
+
+    it('leaves the database of a newer build untouched', () => {
+      const db = makeDb([
+        { datetime: '2026-01-02T09:00:00Z', pids: [], status: 'running' },
+        { datetime: '2026-01-02T09:00:05Z', pids: [], status: 'running' }
+      ]);
+      db.version = 99;
+
+      expect(collection.compactRunEntries(db)).toBe(false);
+      expect(db.runs[0].runs).toHaveLength(2);
+      expect(db.version).toBe(99);
+    });
+  });
+
+  describe('parseInstanceDatabase', () => {
+    const seedInstanceDb = (runs, extra = {}) => {
+      const dbPath = path.join(tmpDir, 'instances.json');
+      fs.writeFileSync(
+        dbPath,
+        JSON.stringify({
+          runs: [{ id: 'inst', name: 'inst', workflow: 'wf', runs }],
+          ...extra
+        })
+      );
+      return dbPath;
+    };
+
+    const makeInstance = (opts = {}) => ({
+      id: 'inst',
+      name: 'inst',
+      workflow_version: {},
+      path: tmpDir,
+      processes: [],
+      status: 'completed',
+      ...opts
+    });
+
+    it('compacts the database and keeps a one-off backup', async () => {
+      collection.root_path = tmpDir;
+      collection.workflow_instances = [makeInstance()];
+      const dbPath = seedInstanceDb([
+        { datetime: '2026-01-01T10:00:00Z', processes: [], pids: [], status: 'created' },
+        { datetime: '2026-01-02T09:00:00Z', processes: [], pids: [123], status: 'running' },
+        { datetime: '2026-01-02T09:00:05Z', processes: [], pids: [123], status: 'running' },
+        { datetime: '2026-01-02T09:10:00Z', processes: [], pids: [], status: 'completed' }
+      ]);
+
+      await collection.parseInstanceDatabase();
+
+      const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+      expect(db.runs[0].runs).toHaveLength(3);
+      expect(db.version).toBe(2);
+
+      const backupPath = `${dbPath}.pre-compaction.bak`;
+      expect(fs.existsSync(backupPath)).toBe(true);
+      expect(JSON.parse(fs.readFileSync(backupPath, 'utf8')).runs[0].runs).toHaveLength(4);
+    });
+
+    it('does not overwrite an existing backup', async () => {
+      collection.root_path = tmpDir;
+      collection.workflow_instances = [makeInstance()];
+      const dbPath = seedInstanceDb([
+        { datetime: '2026-01-02T09:00:00Z', processes: [], pids: [], status: 'running' },
+        { datetime: '2026-01-02T09:00:05Z', processes: [], pids: [], status: 'running' }
+      ]);
+      const backupPath = `${dbPath}.pre-compaction.bak`;
+      fs.writeFileSync(backupPath, 'original');
+
+      await collection.parseInstanceDatabase();
+
+      expect(fs.readFileSync(backupPath, 'utf8')).toBe('original');
+    });
+
+    it('persists the pruned process list when some processes have died', async () => {
+      collection.root_path = tmpDir;
+      const survivor = { pid: 200, cmd: 'nextflow run' };
+      const instance = makeInstance({
+        status: 'running',
+        processes: [survivor, { pid: 100, cmd: 'nextflow run' }]
+      });
+      collection.workflow_instances = [instance];
+      const dbPath = seedInstanceDb([
+        {
+          datetime: '2026-01-02T09:00:00Z',
+          processes: [survivor, { pid: 100, cmd: 'nextflow run' }],
+          pids: [200, 100],
+          status: 'running'
+        }
+      ]);
+      vi.spyOn(collection, 'verifyProcess').mockImplementation(async (desc) => desc.pid === 200);
+
+      await collection.parseInstanceDatabase();
+
+      const runs = JSON.parse(fs.readFileSync(dbPath, 'utf8')).runs[0].runs;
+      expect(runs[runs.length - 1].processes).toEqual([survivor]);
+      expect(runs[runs.length - 1].pids).toEqual([200]);
+      expect(instance.processes).toEqual([survivor]);
+    });
+  });
+
+  describe('resetWorkflowInstanceStatus', () => {
+    it('persists the reset so the previous status is not restored', async () => {
+      collection.root_path = tmpDir;
+      const instance = {
+        id: 'inst',
+        name: 'inst',
+        workflow_version: {},
+        path: tmpDir,
+        processes: [{ pid: 100 }],
+        status: 'failed',
+        setCachedProgress: vi.fn()
+      };
+      collection.workflow_instances = [instance];
+      const dbPath = path.join(tmpDir, 'instances.json');
+      fs.writeFileSync(
+        dbPath,
+        JSON.stringify({
+          runs: [
+            {
+              id: 'inst',
+              name: 'inst',
+              workflow: 'wf',
+              runs: [
+                { datetime: '2026-01-02T09:00:00Z', processes: [], pids: [], status: 'failed' }
+              ]
+            }
+          ]
+        })
+      );
+
+      await collection.resetWorkflowInstanceStatus(instance);
+
+      const runs = JSON.parse(fs.readFileSync(dbPath, 'utf8')).runs[0].runs;
+      expect(runs[runs.length - 1].status).toBe('created');
+      expect(instance.status).toBe('created');
+      expect(instance.processes).toEqual([]);
     });
   });
 

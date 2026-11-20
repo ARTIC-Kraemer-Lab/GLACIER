@@ -46,6 +46,13 @@ import { parseNextflowLog } from '../runners/nextflow/nf-parse.js';
 //
 
 const instance_database_file = 'instances.json';
+/**
+ * Layout version of the instance database. Bumped when the on-disk shape
+ * changes; every writer re-serialises the whole parsed object, so an older
+ * build preserves this key rather than stripping it. Compaction is skipped for
+ * databases written by a newer build.
+ */
+const INSTANCE_DATABASE_VERSION = 2;
 /** How long a manual stop waits for the process (or container) to exit */
 const CANCEL_TIMEOUT_MS = 10_000;
 
@@ -255,11 +262,21 @@ class WorkflowInstance implements IWorkflowInstance {
   getLaunchTime(instanceDb: any): string | undefined {
     if (!instanceDb?.runs) return undefined;
     const run = instanceDb.runs.find((r: any) => r.id === this.id);
-    if (!run?.runs?.length) return undefined;
+    const entries: any[] = run?.runs;
+    if (!entries?.length) return undefined;
+    // A run is recorded as a contiguous block of 'running' entries: one when the
+    // workflow is launched, then one per status poll until it terminates.
+    // Elapsed time is relative to the *latest* run, so walk backwards to the
+    // start of the newest block rather than reporting the first launch.
+    for (let i = entries.length - 1; i >= 0; i--) {
+      if (entries[i]?.status === 'running' && entries[i - 1]?.status !== 'running') {
+        return entries[i].datetime || undefined;
+      }
+    }
     // The initial 'created' record is not a launch. Legacy databases have no
     // status field on run entries, so anything not explicitly 'created' is
     // treated as a launch.
-    const launch = run.runs.find((e: any) => e.status !== 'created');
+    const launch = entries.find((e: any) => e?.status !== 'created');
     return launch?.datetime || undefined;
   }
 
@@ -859,21 +876,88 @@ export class Collection {
             const status = progress || 'closed';
             run.runs.push({
               datetime: new Date().toISOString(),
+              processes: [],
               pids: [],
               status: status
             });
             instance.status = status;
             db_updated = true;
           } else if (alive.length !== descriptors.length) {
-            // Some processes died — update DB with cleaned list
+            // Some processes died. Persist the pruned list: leaving the stale
+            // descriptors in the database means dead PIDs (especially legacy
+            // pid-only records, which carry no command line for PID-reuse
+            // detection) are re-verified — and possibly re-killed — on every
+            // subsequent startup.
+            latest_run.processes = alive;
+            latest_run.pids = alive
+              .map((p: ProcessDescriptor) => p.pid)
+              .filter((p: number) => p > 0);
             db_updated = true;
           }
         }
       }
     }
+    // Collapse the duplicate records left behind by older builds, which recorded
+    // a run entry on every status poll. Back up the original file once, before
+    // the first compaction, so the pre-upgrade data is recoverable.
+    if (this.compactRunEntries(db)) {
+      const backupPath = `${db_path}.pre-compaction.bak`;
+      if (!safeFs.existsSync(backupPath)) safeFs.writeFileSync(backupPath, raw.data);
+      db_updated = true;
+    }
     if (db_updated) {
       this.writeInstanceDatabase(db, db_path);
     }
+  }
+
+  /**
+   * Collapse consecutive run entries that differ only in their timestamp and
+   * process snapshot.
+   *
+   * A run is recorded as a contiguous block of same-status entries, so blocks
+   * can be reduced to a single record without losing information: the earliest
+   * timestamp is kept (launch detection and elapsed time depend on it) and the
+   * most recent process snapshot is retained.
+   */
+  private compactRunEntries(db: any): boolean {
+    // A database written by a newer build has a layout we do not understand.
+    if (typeof db?.version === 'number' && db.version > INSTANCE_DATABASE_VERSION) return false;
+    let changed = false;
+    for (const run of db.runs) {
+      if (!Array.isArray(run?.runs) || run.runs.length < 2) continue;
+      const compacted: any[] = [];
+      for (const entry of run.runs) {
+        const prev = compacted[compacted.length - 1];
+        if (this.isRedundantRunEntry(prev, entry)) {
+          if (entry.processes?.length) prev.processes = entry.processes;
+          if (entry.pids?.length) prev.pids = entry.pids;
+        } else {
+          compacted.push(entry);
+        }
+      }
+      if (compacted.length !== run.runs.length) {
+        run.runs = compacted;
+        changed = true;
+      }
+    }
+    if (!changed) return false;
+    db.version = INSTANCE_DATABASE_VERSION;
+    return true;
+  }
+
+  /**
+   * True when two run entries carry the same information. Entries without a
+   * status predate the status field and are never merged. Any field other than
+   * the timestamp and process snapshot must match exactly, so an unrecognised
+   * field causes the entries to be kept rather than discarded.
+   */
+  private isRedundantRunEntry(prev: any, entry: any): boolean {
+    if (!prev || !entry) return false;
+    if (typeof entry.status !== 'string' || prev.status !== entry.status) return false;
+    // Undefined keys are omitted by JSON.stringify, leaving the stable fields.
+    const stable = (e: any) =>
+      JSON.stringify({ ...e, datetime: undefined, processes: undefined, pids: undefined });
+    return stable(prev) === stable(entry);
   }
 
   /** Atomic write to instances DB: write to temp file, then rename */
@@ -1207,8 +1291,12 @@ export class Collection {
         instance.status === WorkflowStatus.Failed
       ) {
         const updatePromise = this.updateWorkflowInstanceStatus(instance).then((status) => {
-          instance.status = status;
-          this.recordRunWorkflow(instance, status);
+          // Recording on every poll grew instances.json without bound: the list
+          // view refreshes every few seconds and appended a record (plus a full
+          // database rewrite) for every running, completed or failed instance.
+          // Only status transitions are meaningful; launch and cancel paths
+          // write their own records.
+          if (status !== instance.status) this.recordRunWorkflow(instance, status);
         });
         updatePromises.push(updatePromise);
       }
@@ -1539,6 +1627,10 @@ export class Collection {
     local_instance.status = WorkflowStatus.Created;
     local_instance.processes = [];
     local_instance.setCachedProgress(null);
+    // Persist the reset. Without a record the previous terminal status is
+    // restored on the next startup, and a missing nextflow.log is then reported
+    // as 'running', leaving the instance stuck with a bogus elapsed timer.
+    this.recordRunWorkflow(local_instance, WorkflowStatus.Created);
   }
 
   /**
