@@ -1217,8 +1217,12 @@ export class Collection {
         instance.status === WorkflowStatus.Failed
       ) {
         const updatePromise = this.updateWorkflowInstanceStatus(instance).then((status) => {
-          instance.status = status;
-          this.recordRunWorkflow(instance, status);
+          // Recording on every poll grew instances.json without bound: the list
+          // view refreshes every few seconds and appended a record (plus a full
+          // database rewrite) for every running, completed or failed instance.
+          // Only status transitions are meaningful; launch and cancel paths
+          // write their own records.
+          if (status !== instance.status) this.recordRunWorkflow(instance, status);
         });
         updatePromises.push(updatePromise);
       }

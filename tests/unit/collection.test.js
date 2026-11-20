@@ -777,6 +777,65 @@ describe('Collection', () => {
 
       expect(result).toHaveLength(2);
     });
+
+    // The Instances list view polls this every 5 seconds, so anything recorded
+    // per call grows instances.json without bound.
+    const makePolledInstance = (opts = {}) => ({
+      id: 'polled',
+      name: 'polled',
+      workflow_version: {},
+      path: tmpDir,
+      processes: [],
+      status: 'completed',
+      getProgress: vi.fn().mockResolvedValue({ workflow: [{ status: 'completed' }], group: [] }),
+      setCachedProgress: vi.fn(),
+      getProgressPercent: () => 100,
+      getLaunchTime: () => undefined,
+      getLastUpdateTime: () => undefined,
+      ...opts
+    });
+
+    const seedInstanceDb = (runs) => {
+      const dbPath = path.join(tmpDir, 'instances.json');
+      fs.writeFileSync(
+        dbPath,
+        JSON.stringify({ runs: [{ id: 'polled', name: 'polled', workflow: 'wf', runs }] })
+      );
+      return dbPath;
+    };
+
+    const readInstanceRuns = (dbPath) => JSON.parse(fs.readFileSync(dbPath, 'utf8')).runs[0].runs;
+
+    it('does not append a record when the status is unchanged', async () => {
+      collection.root_path = tmpDir;
+      collection.workflow_instances = [makePolledInstance()];
+      const dbPath = seedInstanceDb([
+        { datetime: '2026-01-02T09:00:00Z', processes: [], pids: [], status: 'completed' }
+      ]);
+
+      await collection.listWorkflowInstances();
+      await collection.listWorkflowInstances();
+      await collection.listWorkflowInstances();
+
+      expect(readInstanceRuns(dbPath)).toHaveLength(1);
+    });
+
+    it('appends exactly one record per status transition', async () => {
+      collection.root_path = tmpDir;
+      const instance = makePolledInstance({ status: 'running' });
+      collection.workflow_instances = [instance];
+      const dbPath = seedInstanceDb([
+        { datetime: '2026-01-02T09:00:00Z', processes: [], pids: [], status: 'running' }
+      ]);
+
+      await collection.listWorkflowInstances();
+      await collection.listWorkflowInstances();
+
+      const runs = readInstanceRuns(dbPath);
+      expect(runs).toHaveLength(2);
+      expect(runs[1].status).toBe('completed');
+      expect(instance.status).toBe('completed');
+    });
   });
 
   describe('getInstanceProgress', () => {
