@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Drawer,
@@ -35,6 +35,9 @@ import { API } from '../services/api.js';
 type navbar_page = 'library' | 'instances' | 'settings';
 type severityLevels = 'info' | 'success' | 'warning' | 'error';
 
+/** Sentinel id for the in-memory instance shown before anything is written to disk */
+const DRAFT_INSTANCE_ID = '__draft__';
+
 export default function MainPage({ darkMode, setDarkMode }) {
   const { t } = useTranslation();
 
@@ -65,6 +68,20 @@ export default function MainPage({ darkMode, setDarkMode }) {
   const [customNextflowConfig, setCustomNextflowConfig] = useState('');
   const [open, setOpen] = useState(false);
   const [item, setItem] = useState('');
+  // Instance prepared for a workflow but not yet written to disk. It is
+  // materialised as soon as the user edits a parameter or launches it.
+  const [draftInstance, setDraftInstance] = useState<{
+    instance: any;
+    params: Record<string, unknown>;
+    workflow_id: string;
+    version: string;
+    /** Set once the draft has been written to disk */
+    materialized?: any;
+  } | null>(null);
+  const draftRef = useRef(draftInstance);
+  draftRef.current = draftInstance;
+  const materializingRef = useRef<Promise<any> | null>(null);
+  const materializedDraftRef = useRef<any>(null);
   const [navigateToSettingsPage, setNavigateToSettingsPage] = useState('');
   const [catalogueParseResults, setCatalogueParseResults] = useState([]);
   const [showCatalogueParseErrors, setShowCatalogueParseErrors] = useState(false);
@@ -76,16 +93,24 @@ export default function MainPage({ darkMode, setDarkMode }) {
   } | null>(null);
   const [wslMismatchDismissed, setWslMismatchDismissed] = useState(false);
 
+  const instancesRequestRef = useRef(0);
+
   const refreshInstancesList = useCallback(async () => {
-    API.listWorkflowInstances().then((result) => {
-      if (!result.ok) return;
+    const requestId = ++instancesRequestRef.current;
+    try {
+      const result = await API.listWorkflowInstances();
+      // Ignore stale responses so an older list cannot overwrite a newer one
+      // (e.g. reverting a just-launched instance to 'created').
+      if (!result.ok || requestId !== instancesRequestRef.current) return;
       setInstancesList(
         result.data.map((instance) => ({
           instance: instance,
           name: instance.name
         }))
       );
-    });
+    } catch {
+      // Transient transport failure: keep the last known list.
+    }
   }, []);
 
   useEffect(() => {
@@ -185,18 +210,113 @@ export default function MainPage({ darkMode, setDarkMode }) {
     })();
   }, []);
 
+  // Opening a workflow no longer creates an instance on disk. A draft is shown
+  // instead and only materialised on first edit or launch, so browsing the
+  // library does not leave empty instances behind.
   const createWorkflowInstance = async (repo) => {
-    const workflow_id = repo.id;
-    API.createWorkflowInstance(workflow_id, repo.version).then((result) => {
-      if (!result.ok) return;
-      setInstancesList((prev) => {
-        const newQueue = [...prev, { instance: result.data, name: result.data.name }];
-        setView('instances');
-        setItem(result.data.id);
-        return newQueue;
-      });
+    let result;
+    try {
+      result = await API.prepareWorkflowInstance(repo.id, repo.version);
+    } catch (err: any) {
+      logMessage(`Failed to open workflow: ${err?.message ?? 'Unknown error'}`, 'error');
+      return;
+    }
+    if (!result.ok) {
+      logMessage(`Failed to open workflow: ${result.error?.message ?? 'Unknown error'}`, 'error');
+      return;
+    }
+    const prepared = result.data;
+    materializedDraftRef.current = null;
+    setDraftInstance({
+      ...prepared,
+      instance: { ...prepared.instance, id: DRAFT_INSTANCE_ID }
     });
+    setView('instances');
+    setItem(DRAFT_INSTANCE_ID);
   };
+
+  // Create the draft's instance on disk, keeping the reserved name and the
+  // parameters entered so far. Concurrent callers share a single creation.
+  //
+  // Materialising from an edit keeps the Parameters page mounted (and the
+  // input focused) by leaving the draft instance untouched; `activate` is used
+  // on launch to switch to the real instance, which happens outside typing.
+  const materializeDraft = useCallback(
+    async (params?: Record<string, unknown>, activate = false) => {
+      const activateInstance = (instance: any) => {
+        setDraftInstance(null);
+        setItem(instance.id);
+      };
+
+      // Already written to disk: reuse it so repeated saves never create a
+      // second instance, even after the draft has been activated.
+      if (materializedDraftRef.current) {
+        const instance = materializedDraftRef.current;
+        if (activate) activateInstance(instance);
+        return instance;
+      }
+
+      const draft = draftRef.current;
+      if (!draft) return null;
+
+      if (materializingRef.current) {
+        const instance = await materializingRef.current;
+        if (instance && activate) activateInstance(instance);
+        return instance;
+      }
+
+      const run = (async () => {
+        let result;
+        try {
+          result = await API.createWorkflowInstance(draft.workflow_id, draft.version, {
+            name: draft.instance.name,
+            params: params ?? draft.params
+          });
+        } catch (err: any) {
+          logMessage(`Failed to create instance: ${err?.message ?? 'Unknown error'}`, 'error');
+          return null;
+        }
+        if (!result.ok) {
+          logMessage(
+            `Failed to create instance: ${result.error?.message ?? 'Unknown error'}`,
+            'error'
+          );
+          return null;
+        }
+        return result.data;
+      })();
+      materializingRef.current = run;
+
+      let instance;
+      try {
+        instance = await run;
+      } finally {
+        materializingRef.current = null;
+      }
+      if (!instance) return null;
+
+      // Ignore the result if the user has since opened another workflow.
+      if (draftRef.current === draft) materializedDraftRef.current = instance;
+      setInstancesList((prev) => [
+        ...prev.filter((entry) => entry.instance.id !== instance.id),
+        { instance, name: instance.name }
+      ]);
+      if (activate) {
+        // Launch: switch to the real instance (expected remount, no typing).
+        activateInstance(instance);
+      } else {
+        // Keep the mounted Parameters page (and its input focus) by recording
+        // the instance alongside the unchanged draft instance.
+        setDraftInstance((prev) =>
+          prev && prev.instance.id === DRAFT_INSTANCE_ID
+            ? { ...prev, materialized: instance }
+            : prev
+        );
+      }
+      return instance;
+    },
+    []
+  );
 
   const navigateToSettingsEnv = () => {
     setView('settings');
@@ -396,6 +516,8 @@ export default function MainPage({ darkMode, setDarkMode }) {
                 item={item}
                 setItem={setItem}
                 showHiddenParams={showHiddenParams}
+                draftInstance={draftInstance}
+                materializeDraft={materializeDraft}
               />
             ) : view === 'settings' ? (
               <SettingsPage

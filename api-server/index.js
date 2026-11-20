@@ -110,7 +110,29 @@ app.post('/api/init', async (req, res) =>
 );
 
 app.post('/api/create-workflow-instance', async (req, res) =>
-  post_response(res, call(collection.createWorkflowInstance.bind(collection), req.body.workflow_id, req.body.version))
+  post_response(
+    res,
+    call(
+      collection.createWorkflowInstance.bind(collection),
+      req.body.workflow_id,
+      req.body.version,
+      req.body.opts
+    )
+  )
+);
+
+app.post('/api/prepare-workflow-instance', async (req, res) =>
+  post_response(
+    res,
+    call(collection.prepareWorkflowInstance.bind(collection), req.body.workflow_id, req.body.version)
+  )
+);
+
+app.post('/api/save-workflow-instance-params', async (req, res) =>
+  post_response(
+    res,
+    call(collection.saveWorkflowInstanceParams.bind(collection), req.body.instance, req.body.params)
+  )
 );
 
 app.post('/api/run-workflow', async (req, res) =>

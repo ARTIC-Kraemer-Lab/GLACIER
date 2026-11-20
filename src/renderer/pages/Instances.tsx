@@ -234,7 +234,9 @@ const InstanceAccordion = React.memo(function InstanceAccordion({
                 <Typography variant="caption" color="text.secondary">
                   {t('instances.launch_time')}
                 </Typography>
-                <Typography variant="body2">{formatAbsoluteTime(instance.launch_time)}</Typography>
+                <Typography variant="body2" data-testid="instance-launch-time">
+                  {formatAbsoluteTime(instance.launch_time)}
+                </Typography>
               </Box>
               <Box>
                 <Typography variant="caption" color="text.secondary">
@@ -342,7 +344,9 @@ export default function InstancesPage({
   logMessage,
   item,
   setItem,
-  showHiddenParams
+  showHiddenParams,
+  draftInstance,
+  materializeDraft
 }) {
   const { t } = useTranslation();
 
@@ -683,6 +687,19 @@ export default function InstancesPage({
             </DialogActions>
           </Dialog>
         </>
+      ) : draftInstance && item === draftInstance.instance.id ? (
+        /* Unmaterialised workflow: nothing exists on disk yet */
+        <ParametersPage
+          key={draftInstance.instance.id}
+          instance={draftInstance.instance}
+          refreshInstancesList={refreshInstancesList}
+          showHiddenParams={showHiddenParams}
+          logMessage={logMessage}
+          onEditComplete={onEditComplete}
+          onLaunchSuccess={onLaunchSuccess}
+          startOnParamsTab={false}
+          ensureInstance={materializeDraft}
+        />
       ) : (
         /* Detail view for a selected instance */
         instancesList

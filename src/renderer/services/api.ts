@@ -3,8 +3,12 @@ const isElectron = Boolean(window?.electronAPI);
 const electronAPI = isElectron
   ? {
       init: () => window.electronAPI.init(),
-      createWorkflowInstance: (workflow_id, version) =>
-        window.electronAPI.createWorkflowInstance(workflow_id, version),
+      createWorkflowInstance: (workflow_id, version, opts) =>
+        window.electronAPI.createWorkflowInstance(workflow_id, version, opts),
+      prepareWorkflowInstance: (workflow_id, version) =>
+        window.electronAPI.prepareWorkflowInstance(workflow_id, version),
+      saveWorkflowInstanceParams: (instance, params) =>
+        window.electronAPI.saveWorkflowInstanceParams(instance, params),
       runWorkflow: (instance, params, opts) =>
         window.electronAPI.runWorkflow(instance, params, opts),
       listWorkflowInstances: () => window.electronAPI.listWorkflowInstances(),
@@ -148,8 +152,12 @@ const httpDispatch = async (endpoint, method = 'GET', body = null) => {
 
 const httpAPI = {
   init: async () => httpDispatch('/api/init', 'POST', {}),
-  createWorkflowInstance: async (workflow_id, version) =>
-    httpDispatch('/api/create-workflow-instance', 'POST', { workflow_id, version }),
+  createWorkflowInstance: async (workflow_id, version, opts) =>
+    httpDispatch('/api/create-workflow-instance', 'POST', { workflow_id, version, opts }),
+  prepareWorkflowInstance: async (workflow_id, version) =>
+    httpDispatch('/api/prepare-workflow-instance', 'POST', { workflow_id, version }),
+  saveWorkflowInstanceParams: async (instance, params) =>
+    httpDispatch('/api/save-workflow-instance-params', 'POST', { instance, params }),
   runWorkflow: async (instance, params, opts) =>
     httpDispatch('/api/run-workflow', 'POST', { instance, params, opts }),
   listWorkflowInstances: async () => httpDispatch('/api/list-workflow-instances', 'POST', {}),

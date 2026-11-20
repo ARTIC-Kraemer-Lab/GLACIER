@@ -5,6 +5,7 @@ import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 
 import { IWorkflowInstance } from '../../main/collection.js';
+import { writeFileAtomic } from '../../main/safe-fs.js';
 import { getConfigPath } from '../../main/paths.js';
 import { settings } from '../../main/settings.js';
 import { defaultProfileFrom } from '../../types/profile.js';
@@ -180,10 +181,12 @@ export async function runWorkflow(
     fs_sync.mkdirSync(instancePath, { recursive: true });
   }
 
-  // Save parameters to a file in the instance folder
+  // Save parameters to a file in the instance folder. Written atomically so a
+  // concurrent reader (the Parameters page reloading after launch) never sees
+  // a partially written file, and so this write can overlap an autosave.
   const paramsFile = path.resolve(instancePath, 'glacier-params.json');
   if (!resume && !restart) {
-    await fs.writeFile(paramsFile, JSON.stringify(params, null, 2), 'utf8');
+    await writeFileAtomic(paramsFile, JSON.stringify(params, null, 2));
   }
 
   // Resolve the execution profile: an explicit profile wins; on resume/restart

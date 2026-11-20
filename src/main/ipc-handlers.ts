@@ -67,10 +67,21 @@ export function registerIpcHandlers(resourceRoot?: string) {
 
   ipcMain.handle(
     'create-workflow-instance',
-    async (event, workflow_id: string, version: string) => {
-      return call(collection.createWorkflowInstance.bind(collection), workflow_id, version);
+    async (event, workflow_id: string, version: string, opts?: any) => {
+      return call(collection.createWorkflowInstance.bind(collection), workflow_id, version, opts);
     }
   );
+
+  ipcMain.handle(
+    'prepare-workflow-instance',
+    async (event, workflow_id: string, version: string) => {
+      return call(collection.prepareWorkflowInstance.bind(collection), workflow_id, version);
+    }
+  );
+
+  ipcMain.handle('save-workflow-instance-params', async (event, instance: any, params: any) => {
+    return call(collection.saveWorkflowInstanceParams.bind(collection), instance, params);
+  });
 
   ipcMain.handle('list-workflow-instances', async () => {
     return call(collection.listWorkflowInstances.bind(collection));
