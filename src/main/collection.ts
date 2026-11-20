@@ -869,13 +869,22 @@ export class Collection {
             const status = progress || 'closed';
             run.runs.push({
               datetime: new Date().toISOString(),
+              processes: [],
               pids: [],
               status: status
             });
             instance.status = status;
             db_updated = true;
           } else if (alive.length !== descriptors.length) {
-            // Some processes died — update DB with cleaned list
+            // Some processes died. Persist the pruned list: leaving the stale
+            // descriptors in the database means dead PIDs (especially legacy
+            // pid-only records, which carry no command line for PID-reuse
+            // detection) are re-verified — and possibly re-killed — on every
+            // subsequent startup.
+            latest_run.processes = alive;
+            latest_run.pids = alive
+              .map((p: ProcessDescriptor) => p.pid)
+              .filter((p: number) => p > 0);
             db_updated = true;
           }
         }

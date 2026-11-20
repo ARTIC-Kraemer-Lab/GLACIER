@@ -838,6 +838,56 @@ describe('Collection', () => {
     });
   });
 
+  describe('parseInstanceDatabase', () => {
+    const seedInstanceDb = (runs, extra = {}) => {
+      const dbPath = path.join(tmpDir, 'instances.json');
+      fs.writeFileSync(
+        dbPath,
+        JSON.stringify({
+          runs: [{ id: 'inst', name: 'inst', workflow: 'wf', runs }],
+          ...extra
+        })
+      );
+      return dbPath;
+    };
+
+    const makeInstance = (opts = {}) => ({
+      id: 'inst',
+      name: 'inst',
+      workflow_version: {},
+      path: tmpDir,
+      processes: [],
+      status: 'completed',
+      ...opts
+    });
+
+    it('persists the pruned process list when some processes have died', async () => {
+      collection.root_path = tmpDir;
+      const survivor = { pid: 200, cmd: 'nextflow run' };
+      const instance = makeInstance({
+        status: 'running',
+        processes: [survivor, { pid: 100, cmd: 'nextflow run' }]
+      });
+      collection.workflow_instances = [instance];
+      const dbPath = seedInstanceDb([
+        {
+          datetime: '2026-01-02T09:00:00Z',
+          processes: [survivor, { pid: 100, cmd: 'nextflow run' }],
+          pids: [200, 100],
+          status: 'running'
+        }
+      ]);
+      vi.spyOn(collection, 'verifyProcess').mockImplementation(async (desc) => desc.pid === 200);
+
+      await collection.parseInstanceDatabase();
+
+      const runs = JSON.parse(fs.readFileSync(dbPath, 'utf8')).runs[0].runs;
+      expect(runs[runs.length - 1].processes).toEqual([survivor]);
+      expect(runs[runs.length - 1].pids).toEqual([200]);
+      expect(instance.processes).toEqual([survivor]);
+    });
+  });
+
   describe('getInstanceProgress', () => {
     it('delegates to instance.getProgress and exposes the stored status', async () => {
       const progress = { workflow: [{ status: 'completed' }], group: [] };
