@@ -115,10 +115,14 @@ test('clone a repository', async ({ page }) => {
   // Fill in repo details
   await page.fill('#query-add-workflow-repo-url', `${repo_owner}/${repo_name}`);
   await page.fill('#query-add-workflow-repo-version', 'main');
+  await page.fill('#query-add-workflow-description', 'Test workflow added by the E2E suite');
   await page.click('#query-add-workflow-dialog-okay-button');
   // Wait for workflow to be added
   await expect(page.getByText('User collection')).toBeVisible({ timeout: TIMEOUT_10s });
   await expect(page.getByText(repo_name)).toBeVisible({ timeout: TIMEOUT_10s });
+  await expect(page.getByText('Test workflow added by the E2E suite')).toBeVisible({
+    timeout: TIMEOUT_10s
+  });
   // Click Install (clone the repository)
   await page.click(`#install-${cssEscape(repo_name)}`);
 

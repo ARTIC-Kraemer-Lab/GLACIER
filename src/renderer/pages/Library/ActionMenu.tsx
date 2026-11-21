@@ -57,8 +57,8 @@ export default function ActionMenu({
     });
   };
 
-  const addUserWorkflow = async (name, url, version, section) => {
-    return API.addUserWorkflow(name, url, version, section).then((result) => {
+  const addUserWorkflow = async (name, url, version, section, description) => {
+    return API.addUserWorkflow(name, url, version, section, description).then((result) => {
       if (result.ok) {
         return getCatalogues();
       } else {
