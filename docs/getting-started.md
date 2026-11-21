@@ -23,6 +23,12 @@ Open the downloaded file and follow the installer prompts. Once installed, launc
 
 > **Developers**: If you want to build from source, see {ref}`building-from-source`.
 
+## Update notifications
+
+Each time GLACIER starts it checks the [GitHub Releases page](https://github.com/ARTIC-Kraemer-Lab/GLACIER/releases) for a newer stable release. When one is available, a banner at the top of the window links to the release so you can download the update. Dismissing the banner hides it until the next launch, so it reappears on every run until you update.
+
+Set `GLACIER_DISABLE_UPDATE_CHECK=1` to turn update checks off.
+
 ## First launch
 
 When you start GLACIER for the first time you will see an empty Library page. Your first step is to add a catalogue.
