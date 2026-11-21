@@ -326,18 +326,27 @@ function WorkflowCard({
       )}
       <Box sx={{ flex: 1 }} />
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-        <Typography
-          variant="subtitle1"
+        <Chip
+          size="small"
+          variant="outlined"
+          label={versionLabel}
           title={versionLabel}
           sx={{
+            flexShrink: 1,
             minWidth: 0,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
+            maxWidth: '100%',
+            color: 'inherit',
+            borderColor: 'currentColor',
+            opacity: 0.8,
+            fontFamily: scheme['font-family'] ?? 'inherit',
+            fontSize: scheme['font-size'] ?? 'inherit',
+            '& .MuiChip-label': {
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }
           }}
-        >
-          {versionLabel}
-        </Typography>
+        />
         {!isRepoInstalled && (
           <Stack direction="row" spacing={1} sx={{ ml: 'auto', flexShrink: 0 }}>
             <Button

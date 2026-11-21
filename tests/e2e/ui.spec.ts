@@ -167,6 +167,8 @@ test('launch local workflow', async ({ page }) => {
   // Catalogue descriptions render on the workflow cards (short and long, clamped)
   await expect(page.getByText('Writes results to a custom output directory.')).toBeVisible();
   await expect(page.getByText(/two-line clamping/)).toBeVisible();
+  // The version is shown as a tag on the card
+  await expect(page.locator('#card-sleep').getByText('main', { exact: true })).toBeVisible();
 
   // Create an instance of the workflow (redirects to Parameters page)
   await page.click(`#card-${cssEscape(repo_name)}`);
