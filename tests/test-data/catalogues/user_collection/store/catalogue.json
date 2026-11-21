@@ -27,16 +27,19 @@
         },
         {
           "name": "outdir",
+          "description": "Writes results to a custom output directory.",
           "repo": "glacier/outdir",
           "version": "main"
         },
         {
           "name": "low-resources",
+          "description": "Example workflow with low CPU and memory requirements, used to check that the resource warnings stay hidden.",
           "repo": "glacier/low-resources",
           "version": "main"
         },
         {
           "name": "high-resources",
+          "description": "Example workflow that requests very high CPU and memory limits. This deliberately long description exists so the library card can be checked for two-line clamping, with the full text still available on hover.",
           "repo": "glacier/high-resources",
           "version": "main"
         }

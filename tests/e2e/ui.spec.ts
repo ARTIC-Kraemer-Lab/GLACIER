@@ -164,6 +164,10 @@ test('launch local workflow', async ({ page }) => {
   await page.click('#sidebar-library-button');
   const repo_name = 'sleep';
 
+  // Catalogue descriptions render on the workflow cards (short and long, clamped)
+  await expect(page.getByText('Writes results to a custom output directory.')).toBeVisible();
+  await expect(page.getByText(/two-line clamping/)).toBeVisible();
+
   // Create an instance of the workflow (redirects to Parameters page)
   await page.click(`#card-${cssEscape(repo_name)}`);
 
