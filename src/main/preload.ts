@@ -159,5 +159,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('export-catalogue', name, path),
   createCatalogueFromFile: (filePath: string) =>
     ipcRenderer.invoke('create-catalogue-from-file', filePath),
-  getTheme: () => ipcRenderer.invoke('get-theme')
+  getTheme: () => ipcRenderer.invoke('get-theme'),
+  checkForUpdate: () => ipcRenderer.invoke('check-for-update')
 });

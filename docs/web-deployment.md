@@ -27,6 +27,12 @@ The web server mode:
 
 The `src/renderer/services/api.ts` module automatically detects whether it is running inside Electron or in a browser and routes API calls accordingly — through `window.electronAPI` (IPC) in Electron mode, or through `fetch('/api/...')` in web mode.
 
+## Update checks
+
+The server checks the GitHub releases API on startup and caches the result for six hours, so all browser clients share the same update banner. The server therefore needs outbound HTTPS access to `api.github.com`; if it is unavailable the check fails silently and no banner is shown.
+
+Set `GLACIER_DISABLE_UPDATE_CHECK=1` to turn update checks off.
+
 ## Differences from desktop mode
 
 | Aspect | Electron | Web |

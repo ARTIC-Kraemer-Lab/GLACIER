@@ -29,6 +29,7 @@ import { useTranslation } from 'react-i18next';
 import LibraryPage from './Library/Library';
 import InstancesPage from './Instances';
 import SettingsPage from './Settings/Settings';
+import UpdateBanner from '../components/UpdateBanner';
 import { SettingsKey } from '../../types/settings.js';
 import { API } from '../services/api.js';
 
@@ -395,7 +396,7 @@ export default function MainPage({ darkMode, setDarkMode }) {
   };
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', height: '100vh' }}>
       <Drawer
         variant="permanent"
         open={drawerOpen}
@@ -491,108 +492,111 @@ export default function MainPage({ darkMode, setDarkMode }) {
         </Alert>
       )}
 
-      <PanelGroup direction="vertical" style={{ height: '100vh', width: '100%' }}>
-        <Panel>
-          <Paper
-            variant="outlined"
-            sx={{ width: '100%', height: '100%', overflowY: 'auto', minHeight: 0, p: 3 }}
-            square
-          >
-            {view === 'library' ? (
-              <LibraryPage
-                createWorkflowInstance={createWorkflowInstance}
-                permitAddCatalogues={permitAddCatalogues}
-                permitCatalogueModifications={permitCatalogueModifications}
-                permitImportShards={permitImportShards}
-                permitAddRepos={permitAddRepos}
-                navigateToSettingsEnv={navigateToSettingsEnv}
-                logMessage={logMessage}
-              />
-            ) : view === 'instances' ? (
-              <InstancesPage
-                instancesList={instancesList}
-                refreshInstancesList={refreshInstancesList}
-                logMessage={logMessage}
-                item={item}
-                setItem={setItem}
-                showHiddenParams={showHiddenParams}
-                draftInstance={draftInstance}
-                materializeDraft={materializeDraft}
-              />
-            ) : view === 'settings' ? (
-              <SettingsPage
-                darkMode={darkMode}
-                setDarkMode={setDarkMode}
-                collectionsPath={collectionsPath}
-                documentsPath={documentsPath}
-                permitAddCatalogues={permitAddCatalogues}
-                setPermitAddCatalogues={setPermitAddCatalogues}
-                permitCatalogueModifications={permitCatalogueModifications}
-                setPermitCatalogueModifications={setPermitCatalogueModifications}
-                permitImportShards={permitImportShards}
-                setPermitImportShards={setPermitImportShards}
-                permitAddRepos={permitAddRepos}
-                setPermitAddRepos={setPermitAddRepos}
-                showHiddenParams={showHiddenParams}
-                setShowHiddenParams={setShowHiddenParams}
-                showLogPanel={showLogPanel}
-                onShowLogPanelChange={handleShowLogPanel}
-                autoStoreDir={autoStoreDir}
-                setAutoStoreDir={setAutoStoreDir}
-                nextflowSyntaxParser={nextflowSyntaxParser}
-                setNextflowSyntaxParser={setNextflowSyntaxParser}
-                autoOutdir={autoOutdir}
-                setAutoOutdir={setAutoOutdir}
-                outputPath={outputPath}
-                setOutputPath={setOutputPath}
-                storeDirPath={storeDirPath}
-                setStoreDirPath={setStoreDirPath}
-                resourceLimitsCpu={resourceLimitsCpu}
-                setResourceLimitsCpu={setResourceLimitsCpu}
-                resourceLimitsMemory={resourceLimitsMemory}
-                setResourceLimitsMemory={setResourceLimitsMemory}
-                customNextflowConfig={customNextflowConfig}
-                setCustomNextflowConfig={setCustomNextflowConfig}
-                navigateToPage={navigateToSettingsPage}
-                setNavigateToPage={setNavigateToSettingsPage}
-                onReopenSetup={() => {
-                  setPendingConfigPath(collectionsPath);
-                  setPendingDocumentsPath(documentsPath);
-                  setShowPathDialog(true);
-                }}
-              />
-            ) : null}
-          </Paper>
-        </Panel>
-
-        {showLogPanel && <PanelResizeHandle />}
-
-        {showLogPanel && (
-          <Panel defaultSize={10} minSize={2} collapsible>
+      <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <UpdateBanner />
+        <PanelGroup direction="vertical" style={{ flex: 1, minHeight: 0, width: '100%' }}>
+          <Panel>
             <Paper
               variant="outlined"
-              sx={{ width: '100%', height: '100%', overflowY: 'auto' }}
+              sx={{ width: '100%', height: '100%', overflowY: 'auto', minHeight: 0, p: 3 }}
               square
             >
-              <Box
-                id="logMessage"
-                component="pre"
-                sx={{ m: 0, fontSize: '0.75rem', whiteSpace: 'pre-wrap' }}
-              >
-                {log.map((line, index) => (
-                  <Typography
-                    key={index}
-                    variant="body2"
-                    color={severity === 'error' ? 'error.main' : 'text.primary'}
-                  >
-                    {line}
-                  </Typography>
-                ))}
-              </Box>
+              {view === 'library' ? (
+                <LibraryPage
+                  createWorkflowInstance={createWorkflowInstance}
+                  permitAddCatalogues={permitAddCatalogues}
+                  permitCatalogueModifications={permitCatalogueModifications}
+                  permitImportShards={permitImportShards}
+                  permitAddRepos={permitAddRepos}
+                  navigateToSettingsEnv={navigateToSettingsEnv}
+                  logMessage={logMessage}
+                />
+              ) : view === 'instances' ? (
+                <InstancesPage
+                  instancesList={instancesList}
+                  refreshInstancesList={refreshInstancesList}
+                  logMessage={logMessage}
+                  item={item}
+                  setItem={setItem}
+                  showHiddenParams={showHiddenParams}
+                  draftInstance={draftInstance}
+                  materializeDraft={materializeDraft}
+                />
+              ) : view === 'settings' ? (
+                <SettingsPage
+                  darkMode={darkMode}
+                  setDarkMode={setDarkMode}
+                  collectionsPath={collectionsPath}
+                  documentsPath={documentsPath}
+                  permitAddCatalogues={permitAddCatalogues}
+                  setPermitAddCatalogues={setPermitAddCatalogues}
+                  permitCatalogueModifications={permitCatalogueModifications}
+                  setPermitCatalogueModifications={setPermitCatalogueModifications}
+                  permitImportShards={permitImportShards}
+                  setPermitImportShards={setPermitImportShards}
+                  permitAddRepos={permitAddRepos}
+                  setPermitAddRepos={setPermitAddRepos}
+                  showHiddenParams={showHiddenParams}
+                  setShowHiddenParams={setShowHiddenParams}
+                  showLogPanel={showLogPanel}
+                  onShowLogPanelChange={handleShowLogPanel}
+                  autoStoreDir={autoStoreDir}
+                  setAutoStoreDir={setAutoStoreDir}
+                  nextflowSyntaxParser={nextflowSyntaxParser}
+                  setNextflowSyntaxParser={setNextflowSyntaxParser}
+                  autoOutdir={autoOutdir}
+                  setAutoOutdir={setAutoOutdir}
+                  outputPath={outputPath}
+                  setOutputPath={setOutputPath}
+                  storeDirPath={storeDirPath}
+                  setStoreDirPath={setStoreDirPath}
+                  resourceLimitsCpu={resourceLimitsCpu}
+                  setResourceLimitsCpu={setResourceLimitsCpu}
+                  resourceLimitsMemory={resourceLimitsMemory}
+                  setResourceLimitsMemory={setResourceLimitsMemory}
+                  customNextflowConfig={customNextflowConfig}
+                  setCustomNextflowConfig={setCustomNextflowConfig}
+                  navigateToPage={navigateToSettingsPage}
+                  setNavigateToPage={setNavigateToSettingsPage}
+                  onReopenSetup={() => {
+                    setPendingConfigPath(collectionsPath);
+                    setPendingDocumentsPath(documentsPath);
+                    setShowPathDialog(true);
+                  }}
+                />
+              ) : null}
             </Paper>
           </Panel>
-        )}
-      </PanelGroup>
+
+          {showLogPanel && <PanelResizeHandle />}
+
+          {showLogPanel && (
+            <Panel defaultSize={10} minSize={2} collapsible>
+              <Paper
+                variant="outlined"
+                sx={{ width: '100%', height: '100%', overflowY: 'auto' }}
+                square
+              >
+                <Box
+                  id="logMessage"
+                  component="pre"
+                  sx={{ m: 0, fontSize: '0.75rem', whiteSpace: 'pre-wrap' }}
+                >
+                  {log.map((line, index) => (
+                    <Typography
+                      key={index}
+                      variant="body2"
+                      color={severity === 'error' ? 'error.main' : 'text.primary'}
+                    >
+                      {line}
+                    </Typography>
+                  ))}
+                </Box>
+              </Paper>
+            </Panel>
+          )}
+        </PanelGroup>
+      </Box>
 
       <Dialog open={showPathDialog} maxWidth="sm" fullWidth>
         <DialogTitle>{t('setup.title', 'Welcome to GLACIER')}</DialogTitle>

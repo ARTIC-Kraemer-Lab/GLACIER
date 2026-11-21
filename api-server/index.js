@@ -1,5 +1,6 @@
 import express from 'express';
 import { Collection } from '../dist/main/collection.js';
+import { checkForUpdates } from '../dist/main/updates.js';
 
 import path from 'path';
 import fs from 'fs';
@@ -624,6 +625,10 @@ app.post('/api/get-theme', async (req, res) => {
     return manifest.theme || null;
   }));
 });
+
+app.post('/api/check-for-update', async (req, res) =>
+  post_response(res, call(checkForUpdates))
+);
 
 const PORT = process.env.PORT || 3030;
 app.listen(PORT, () => {

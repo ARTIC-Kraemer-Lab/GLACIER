@@ -21,7 +21,9 @@ export const test = base.extend<Fixtures>({
       requireElectronBinary(); // fails with an actionable message if not installed
 
       const electronApp: ElectronApplication = await electron.launch({
-        args: ['.', '--fullscreen', '--no-sandbox']
+        args: ['.', '--fullscreen', '--no-sandbox'],
+        // Keep tests hermetic: never contact the GitHub releases API.
+        env: { ...process.env, GLACIER_DISABLE_UPDATE_CHECK: '1' }
       });
 
       // Capture main process stdout/stderr

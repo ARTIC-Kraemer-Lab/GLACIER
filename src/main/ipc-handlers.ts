@@ -6,6 +6,7 @@ import { execSync } from 'child_process';
 import { Collection } from './collection.js';
 import { settings, StoreSchema } from './settings.js';
 import { getWorkflowGlacierConfig } from './repo.js';
+import { checkForUpdates } from './updates.js';
 import { Result } from '../types/types.js';
 
 const collection = Collection.getInstance();
@@ -426,5 +427,9 @@ export function registerIpcHandlers(resourceRoot?: string) {
       const manifest = JSON.parse(raw);
       return manifest.theme || null;
     });
+  });
+
+  ipcMain.handle('check-for-update', async () => {
+    return call(checkForUpdates);
   });
 }

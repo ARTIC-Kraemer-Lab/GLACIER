@@ -134,7 +134,8 @@ const electronAPI = isElectron
       listHiddenInstances: () => window.electronAPI.listHiddenInstances(),
       exportCatalogue: (name, path) => window.electronAPI.exportCatalogue(name, path),
       createCatalogueFromFile: (filePath) => window.electronAPI.createCatalogueFromFile(filePath),
-      getTheme: () => window.electronAPI.getTheme()
+      getTheme: () => window.electronAPI.getTheme(),
+      checkForUpdate: () => window.electronAPI.checkForUpdate()
     }
   : null;
 
@@ -345,7 +346,8 @@ const httpAPI = {
     httpDispatch('/api/export-catalogue', 'POST', { name, path }),
   createCatalogueFromFile: async (filePath) =>
     httpDispatch('/api/create-catalogue-from-file', 'POST', { filePath }),
-  getTheme: async () => httpDispatch('/api/get-theme', 'POST', {})
+  getTheme: async () => httpDispatch('/api/get-theme', 'POST', {}),
+  checkForUpdate: async () => httpDispatch('/api/check-for-update', 'POST', {})
 };
 
 export const API = isElectron ? electronAPI : httpAPI;

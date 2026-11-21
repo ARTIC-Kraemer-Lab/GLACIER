@@ -16,6 +16,10 @@
     "instances": "Instances",
     "settings": "Settings"
   },
+  "updates": {
+    "available": "GLACIER {{version}} is available (you are running {{current}}).",
+    "download-update": "Download update"
+  },
   "library": {
     "local-repositories": "Local Repositories",
     "install": "Install",

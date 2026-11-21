@@ -66,6 +66,8 @@ export default defineConfig({
     command: isCI ? 'npm run serve' : 'npm run server',
     url: 'http://localhost:3030',
     reuseExistingServer: !isCI,
+    // Keep tests hermetic: never contact the GitHub releases API.
+    env: { ...process.env, GLACIER_DISABLE_UPDATE_CHECK: '1' },
     timeout: 180_000
   }
 });
