@@ -408,7 +408,8 @@ app.post('/api/add-user-workflow', async (req, res) =>
       req.body.name,
       req.body.repoUrl,
       req.body.ver,
-      req.body.section
+      req.body.section,
+      req.body.description
     )
   )
 );

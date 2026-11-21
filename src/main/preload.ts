@@ -119,8 +119,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getCatalogues: () => ipcRenderer.invoke('get-catalogues'),
   getCatalogueParseResults: () => ipcRenderer.invoke('get-catalogue-parse-results'),
   refreshCatalogues: () => ipcRenderer.invoke('refresh-catalogues'),
-  addUserWorkflow: (name: string, repoUrl: string, version: string, section: string) =>
-    ipcRenderer.invoke('add-user-workflow', name, repoUrl, version, section),
+  addUserWorkflow: (
+    name: string,
+    repoUrl: string,
+    version: string,
+    section: string,
+    description?: string
+  ) => ipcRenderer.invoke('add-user-workflow', name, repoUrl, version, section, description),
   syncRepo: (repo: string) => ipcRenderer.invoke('sync-repo', repo),
   getWorkflowParams: (repoPath: string) => ipcRenderer.invoke('get-workflow-params', repoPath),
   pickFile: (filters?: Electron.FileFilter[]) => ipcRenderer.invoke('pick-file', { filters }),

@@ -85,6 +85,8 @@ export interface CatalogueWorkflow {
   name: string;
   repo: string;
   version?: string;
+  /** Optional display-only context for the workflow card */
+  description?: string;
   hidden?: boolean;
   parameters?: Record<string, any>;
   /** Source remote for offline-imported (shard) workflows, used for update checks */
@@ -2659,7 +2661,10 @@ export class Collection {
 
       const alreadyExists = targetSection.workflows.some((w) => w.repo === wf.repo);
       if (!alreadyExists) {
-        targetSection.workflows.push({ name: wf.name, repo: wf.repo, version: wf.version });
+        // Copy the whole entry so optional metadata (description, url, parameters)
+        // is not lost when moving it between catalogues.
+        const { hidden: _hidden, ...entry } = wf;
+        targetSection.workflows.push(entry);
         moved++;
       }
     }
@@ -3085,7 +3090,13 @@ export class Collection {
     this.parseCatalogues();
   }
 
-  async addUserWorkflow(name: string, url: string, version: string, section: string) {
+  async addUserWorkflow(
+    name: string,
+    url: string,
+    version: string,
+    section: string,
+    description?: string
+  ) {
     const { owner, repo } = parseRepoUrl(url);
     if (!name) {
       name = repo;
@@ -3096,6 +3107,7 @@ export class Collection {
     if (!version) {
       version = 'latest';
     }
+    description = description?.trim();
     // Verify that repository url exists
     const tags = await getRepoTags(url);
     const branches = await getRepoBranches(url);
@@ -3147,11 +3159,15 @@ export class Collection {
       };
       user_catalogue.sections.push(user_section);
     }
-    user_section.workflows.push({
+    const entry: CatalogueWorkflow = {
       name: name,
       repo: `${owner}/${repo}`,
       version: version
-    });
+    };
+    if (description) {
+      entry.description = description;
+    }
+    user_section.workflows.push(entry);
     // Save to catalogues path
     this.ensurePathExists(path.dirname(user_cat_path));
     safeFs.writeFileSync(user_cat_path, JSON.stringify(user_catalogue, null, 2));

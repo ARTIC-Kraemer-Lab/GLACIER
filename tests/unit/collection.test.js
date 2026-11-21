@@ -1790,6 +1790,37 @@ describe('Collection', () => {
       expect(collection.catalogues[0].source).toBe('owner/cat-repo');
     });
 
+    it('preserves workflow descriptions', async () => {
+      const catDir = path.join(tmpDir, 'catalogues', 'owner', 'cat-repo');
+      fs.mkdirSync(catDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(catDir, 'catalogue.json'),
+        JSON.stringify({
+          name: 'Test Cat',
+          sections: [
+            {
+              name: 'Section 1',
+              workflows: [
+                {
+                  name: 'wf1',
+                  repo: 'owner/repo1',
+                  version: 'latest',
+                  description: 'A workflow description'
+                }
+              ]
+            }
+          ]
+        }),
+        'utf8'
+      );
+
+      await collection.parseCatalogues();
+
+      expect(collection.catalogues[0].sections[0].workflows[0].description).toBe(
+        'A workflow description'
+      );
+    });
+
     it('clears existing catalogues before parsing', async () => {
       collection.catalogues = [makeCatalogue()];
 
@@ -2224,6 +2255,94 @@ describe('Collection', () => {
 
     it('throws if catalogue not found', async () => {
       await expect(collection.removeCatalogue('Nope')).rejects.toThrow('not found');
+    });
+  });
+
+  describe('moveCatalogueWorkflowsToUser', () => {
+    it('preserves workflow metadata such as the description', async () => {
+      collection.catalogues = [
+        makeCatalogue({
+          sections: [
+            {
+              name: 'Section 1',
+              workflows: [
+                {
+                  name: 'wf1',
+                  repo: 'owner/repo1',
+                  version: 'latest',
+                  description: 'Some context',
+                  parameters: { outdir: './results' },
+                  hidden: true
+                }
+              ]
+            }
+          ]
+        })
+      ];
+
+      const moved = await collection.moveCatalogueWorkflowsToUser('Test Catalogue', [
+        { section: 'Section 1', name: 'wf1' }
+      ]);
+
+      expect(moved).toBe(1);
+      const userFile = path.join(
+        tmpDir,
+        'catalogues',
+        'user_collection',
+        'store',
+        'catalogue.json'
+      );
+      const userCat = JSON.parse(fs.readFileSync(userFile, 'utf8'));
+      const entry = userCat.sections[0].workflows[0];
+      expect(entry.description).toBe('Some context');
+      expect(entry.parameters).toEqual({ outdir: './results' });
+      expect(entry.hidden).toBeUndefined();
+    });
+  });
+
+  describe('addUserWorkflow', () => {
+    beforeEach(() => {
+      vi.mocked(repo.getRepoTags).mockResolvedValue(['main']);
+      vi.mocked(repo.getRepoBranches).mockResolvedValue(['main']);
+    });
+
+    it('stores an optional, trimmed description in the user catalogue', async () => {
+      await collection.addUserWorkflow(
+        'My WF',
+        'owner/repo',
+        'main',
+        'My Workflows',
+        '  Some context  '
+      );
+
+      const userFile = path.join(
+        tmpDir,
+        'catalogues',
+        'user_collection',
+        'store',
+        'catalogue.json'
+      );
+      const userCat = JSON.parse(fs.readFileSync(userFile, 'utf8'));
+      expect(userCat.sections[0].workflows[0]).toEqual({
+        name: 'My WF',
+        repo: 'owner/repo',
+        version: 'main',
+        description: 'Some context'
+      });
+    });
+
+    it('omits a blank description', async () => {
+      await collection.addUserWorkflow('My WF', 'owner/repo', 'main', 'My Workflows', '   ');
+
+      const userFile = path.join(
+        tmpDir,
+        'catalogues',
+        'user_collection',
+        'store',
+        'catalogue.json'
+      );
+      const userCat = JSON.parse(fs.readFileSync(userFile, 'utf8'));
+      expect(userCat.sections[0].workflows[0]).not.toHaveProperty('description');
     });
   });
 

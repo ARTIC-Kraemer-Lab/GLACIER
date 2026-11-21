@@ -83,8 +83,8 @@ const electronAPI = isElectron
       getCatalogues: () => window.electronAPI.getCatalogues(),
       getCatalogueParseResults: () => window.electronAPI.getCatalogueParseResults(),
       refreshCatalogues: () => window.electronAPI.refreshCatalogues(),
-      addUserWorkflow: (name, repoUrl, ver, section) =>
-        window.electronAPI.addUserWorkflow(name, repoUrl, ver, section),
+      addUserWorkflow: (name, repoUrl, ver, section, description) =>
+        window.electronAPI.addUserWorkflow(name, repoUrl, ver, section, description),
       getCollectionRepos: () => window.electronAPI.getCollectionRepos(),
       getCollectionsPath: () => window.electronAPI.getCollectionsPath(),
       setCollectionsPath: (path) => window.electronAPI.setCollectionsPath(path),
@@ -269,8 +269,8 @@ const httpAPI = {
   getCatalogueParseResults: async () =>
     httpDispatch('/api/get-catalogue-parse-results', 'POST', {}),
   refreshCatalogues: async () => httpDispatch('/api/refresh-catalogues', 'POST', {}),
-  addUserWorkflow: async (name, repoUrl, ver, section) =>
-    httpDispatch('/api/add-user-workflow', 'POST', { name, repoUrl, ver, section }),
+  addUserWorkflow: async (name, repoUrl, ver, section, description) =>
+    httpDispatch('/api/add-user-workflow', 'POST', { name, repoUrl, ver, section, description }),
   getCollectionRepos: async () => httpDispatch('/api/get-collection-repos', 'POST', {}),
   getCollectionsPath: async () => httpDispatch('/api/get-collections-path', 'POST', {}),
   setCollectionsPath: async (path) => httpDispatch('/api/set-collections-path', 'POST', { path }),

@@ -115,10 +115,14 @@ test('clone a repository', async ({ page }) => {
   // Fill in repo details
   await page.fill('#query-add-workflow-repo-url', `${repo_owner}/${repo_name}`);
   await page.fill('#query-add-workflow-repo-version', 'main');
+  await page.fill('#query-add-workflow-description', 'Test workflow added by the E2E suite');
   await page.click('#query-add-workflow-dialog-okay-button');
   // Wait for workflow to be added
   await expect(page.getByText('User collection')).toBeVisible({ timeout: TIMEOUT_10s });
   await expect(page.getByText(repo_name)).toBeVisible({ timeout: TIMEOUT_10s });
+  await expect(page.getByText('Test workflow added by the E2E suite')).toBeVisible({
+    timeout: TIMEOUT_10s
+  });
   // Click Install (clone the repository)
   await page.click(`#install-${cssEscape(repo_name)}`);
 
@@ -159,6 +163,12 @@ test('launch local workflow', async ({ page }) => {
   // --- Navigate to Library page
   await page.click('#sidebar-library-button');
   const repo_name = 'sleep';
+
+  // Catalogue descriptions render on the workflow cards (short and long, clamped)
+  await expect(page.getByText('Writes results to a custom output directory.')).toBeVisible();
+  await expect(page.getByText(/two-line clamping/)).toBeVisible();
+  // The version is shown as a tag on the card
+  await expect(page.locator('#card-sleep').getByText('main', { exact: true })).toBeVisible();
 
   // Create an instance of the workflow (redirects to Parameters page)
   await page.click(`#card-${cssEscape(repo_name)}`);

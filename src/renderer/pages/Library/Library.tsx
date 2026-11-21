@@ -232,6 +232,16 @@ function WorkflowCard({
     API.openWebPage(repoUrl(workflow.url || workflow.repo));
   };
 
+  const description = typeof workflow.description === 'string' ? workflow.description.trim() : '';
+  const versionLabel = [
+    workflow.version,
+    isRepoInstalled && workflow.version === 'latest' && versionInstalled
+      ? `(${versionInstalled})`
+      : ''
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <Paper
       id={`card-${workflow.name}`}
@@ -293,45 +303,80 @@ function WorkflowCard({
           )}
         </Menu>
       </Box>
-      <Typography variant="subtitle1">
-        {workflow.version}{' '}
-        {isRepoInstalled && workflow.version === 'latest' && `(${versionInstalled})`}
-      </Typography>
+      {description && (
+        <Typography
+          variant="body2"
+          title={description}
+          sx={{
+            mt: 0.5,
+            opacity: 0.8,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden'
+          }}
+        >
+          {description}
+        </Typography>
+      )}
       {isRepoInstalled && workflow.version === 'latest' && updateMap?.[workflow.repo] && (
         <Typography variant="caption" color="warning.main">
           {t('library.update-available', { version: updateMap[workflow.repo].availableVersion })}
         </Typography>
       )}
       <Box sx={{ flex: 1 }} />
-      {!isRepoInstalled && (
-        <Stack direction="row" spacing={1}>
-          <Button
-            id={`install-${workflow.name}`}
-            size="small"
-            variant="contained"
-            sx={{
-              color: scheme['control-fg'] ?? undefined,
-              background: scheme['control-bg'] ?? undefined,
-              fontFamily: scheme['font-family'] ?? 'inherit',
-              fontSize: scheme['font-size'] ?? 'inherit'
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              cloneRepo();
-            }}
-          >
-            {t('library.install')}
-          </Button>
-          <Button
-            id={`source-${workflow.name}`}
-            size="small"
-            variant="outlined"
-            onClick={handleSourceClick}
-          >
-            {t('library.source')}
-          </Button>
-        </Stack>
-      )}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+        <Chip
+          size="small"
+          variant="outlined"
+          label={versionLabel}
+          title={versionLabel}
+          sx={{
+            flexShrink: 1,
+            minWidth: 0,
+            maxWidth: '100%',
+            color: 'inherit',
+            borderColor: 'currentColor',
+            opacity: 0.8,
+            fontFamily: scheme['font-family'] ?? 'inherit',
+            fontSize: scheme['font-size'] ?? 'inherit',
+            '& .MuiChip-label': {
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }
+          }}
+        />
+        {!isRepoInstalled && (
+          <Stack direction="row" spacing={1} sx={{ ml: 'auto', flexShrink: 0 }}>
+            <Button
+              id={`install-${workflow.name}`}
+              size="small"
+              variant="contained"
+              sx={{
+                color: scheme['control-fg'] ?? undefined,
+                background: scheme['control-bg'] ?? undefined,
+                fontFamily: scheme['font-family'] ?? 'inherit',
+                fontSize: scheme['font-size'] ?? 'inherit'
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                cloneRepo();
+              }}
+            >
+              {t('library.install')}
+            </Button>
+            <Button
+              id={`source-${workflow.name}`}
+              size="small"
+              variant="outlined"
+              onClick={handleSourceClick}
+            >
+              {t('library.source')}
+            </Button>
+          </Stack>
+        )}
+      </Box>
       <VersionSelectDialog
         open={versionSelectorOpen}
         workflowName={workflow.name}
@@ -477,7 +522,10 @@ function SectionCard({
         {(section?.workflows || [])
           .filter((workflow) => !(workflow?.hidden || false))
           .map((workflow) => (
-            <Grid size={3} key={`${workflow.repo}@${workflow.version || 'latest'}`}>
+            <Grid
+              size={{ xs: 12, sm: 6, md: 4, lg: 3 }}
+              key={`${workflow.repo}@${workflow.version || 'latest'}`}
+            >
               <WorkflowCard
                 workflow={workflow}
                 hideWorkflow={() => hideWorkflow(workflow)}

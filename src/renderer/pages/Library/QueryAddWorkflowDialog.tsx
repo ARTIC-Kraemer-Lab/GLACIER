@@ -22,6 +22,7 @@ export default function QueryAddWorkflowDialog({ open, action, onClose }) {
   const [repo, setRepo] = React.useState('');
   const [version, setVersion] = React.useState(default_version);
   const [section, setSection] = React.useState(default_section);
+  const [description, setDescription] = React.useState('');
 
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
@@ -38,7 +39,7 @@ export default function QueryAddWorkflowDialog({ open, action, onClose }) {
     }
     // Perform the action
     setLoading(true);
-    action(name, repo, version, section)
+    action(name, repo, version, section, description)
       .then(() => {
         // close the dialog after action is completed successfully
         setLoading(false);
@@ -57,6 +58,7 @@ export default function QueryAddWorkflowDialog({ open, action, onClose }) {
     setRepo('');
     setVersion(default_version);
     setSection(default_section);
+    setDescription('');
     setError(null);
   }, [open]);
 
@@ -107,6 +109,18 @@ export default function QueryAddWorkflowDialog({ open, action, onClose }) {
               label={t('library.add-workflow-dialog.name')}
               value={name}
               onChange={(e) => setName(e.target.value)}
+            />
+          </FormControl>
+
+          <FormControl sx={{ mt: 2, width: '100%' }}>
+            <TextField
+              id="query-add-workflow-description"
+              label={t('library.add-workflow-dialog.workflow-description')}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              multiline
+              minRows={2}
+              maxRows={4}
             />
           </FormControl>
 

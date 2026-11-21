@@ -63,7 +63,7 @@ For workflows tracked with `"version": "latest"`, GLACIER can check whether a ne
 You can add your own workflow repositories outside of any curated catalogue:
 
 1. **Actions** → **Add Repository**.
-2. Enter a display name, the GitHub URL, and optionally a version tag.
+2. Enter a display name, the GitHub URL, and optionally a version tag and description.
 3. The workflow is added to a special **User collection** catalogue that GLACIER creates automatically.
 
 ## Removing a catalogue
@@ -85,6 +85,7 @@ Example `catalogue.json`:
       "workflows": [
         {
           "name": "amplicon-nf",
+          "description": "Amplicon-based sequencing analysis",
           "repo": "artic-network/amplicon-nf",
           "version": "main",
           "parameters": {
@@ -97,6 +98,8 @@ Example `catalogue.json`:
   ]
 }
 ```
+
+Each workflow entry can also include an optional `description`, which is shown on the workflow card (clamped to two lines, with the full text available on hover). It is display-only and is not used when launching the workflow.
 
 The precedence for parameter values (highest to lowest) is:
 
