@@ -4,7 +4,7 @@ on:
   schedule:
     # Mondays at 06:00 UTC. Stable releases arrive in April and October, with
     # occasional patches in between.
-    - cron: '0 6 * * 1'
+    - cron: '47 5 * * 1'
   workflow_dispatch:
 
 permissions:
