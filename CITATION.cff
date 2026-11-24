@@ -36,7 +36,7 @@ authors:
     given-names: "Moritz"
     orcid: "https://orcid.org/0000-0001-8838-7147"
 
-version: "1.0.0"
+version: "1.1.0"
 doi: "10.5281/zenodo.21980095"
 date-released: 2026-11-14
 url: "https://github.com/ARTIC-Kraemer-Lab/GLACIER"
