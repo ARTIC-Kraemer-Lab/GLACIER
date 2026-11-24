@@ -202,7 +202,8 @@
     },
     "params": {
       "title": "Parameters",
-      "no-parameters": "No parameters available"
+      "no-parameters": "No parameters available",
+      "empty-option": "(empty)"
     },
     "save-params": "Save",
     "load-params": "Load",

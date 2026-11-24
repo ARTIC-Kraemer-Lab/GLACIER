@@ -199,7 +199,8 @@
     },
     "params": {
       "title": "Paramètres",
-      "no-parameters": "Aucun paramètre requis pour ce flux de travail."
+      "no-parameters": "Aucun paramètre requis pour ce flux de travail.",
+      "empty-option": "(vide)"
     },
     "test-launch-dropdown": "Test",
     "test-launch-title": "Options de test",

@@ -21,6 +21,12 @@
           "version": "main"
         },
         {
+          "name": "empty-enum",
+          "description": "Exercises selectors that offer an empty string as an enum option.",
+          "repo": "glacier/empty-enum",
+          "version": "main"
+        },
+        {
           "name": "timeout",
           "repo": "glacier/timeout",
           "version": "main"
