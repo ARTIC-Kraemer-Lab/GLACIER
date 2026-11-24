@@ -366,6 +366,88 @@ test('browsing a workflow leaves no empty instance behind', async ({ page }) => 
   await expect(page.getByTestId('instance-launch-time')).toHaveText('-');
 });
 
+test('empty string enum options are labelled in selectors', async ({ page }) => {
+  const { docsPath } = await setupLocalCollections(page);
+
+  await page.click('#sidebar-library-button');
+  await page.click(`#card-${cssEscape('empty-enum')}`);
+  await page.click('#parameters-params-tab');
+
+  // The autosaved parameters file is what gets handed to Nextflow, so the
+  // assertions below are on the values, not just the rendered labels.
+  const findParamsFile = () => {
+    try {
+      const instancesDir = path.join(docsPath, 'instances', 'glacier', 'empty-enum@main');
+      const [name] = fs
+        .readdirSync(instancesDir)
+        .filter((entry) => fs.statSync(path.join(instancesDir, entry)).isDirectory());
+      if (!name) return undefined;
+      const paramsFile = path.join(instancesDir, name, 'glacier-params.json');
+      return fs.existsSync(paramsFile) ? paramsFile : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  const readParams = () => {
+    const paramsFile = findParamsFile();
+    return paramsFile ? JSON.parse(fs.readFileSync(paramsFile, 'utf8')) : undefined;
+  };
+
+  // Multi-enum arrays (checkbox group): the empty option is labelled and, like
+  // any other entry, reads back as checked and stores the empty string. This is
+  // clicked before any dropdown so no other control is focused; JsonForms hides
+  // a focused control's description, and the reflow from blurring one could
+  // otherwise swallow the click.
+  const emptyCheckbox = page.getByRole('checkbox', { name: '(empty)' });
+  await expect(emptyCheckbox).toBeVisible();
+  await emptyCheckbox.check();
+  await expect(emptyCheckbox).toBeChecked();
+  await expect.poll(() => readParams()?.tools, { timeout: TIMEOUT_10s }).toEqual(['']);
+
+  // String enum (autocomplete): the empty option must render as a readable row
+  // rather than a collapsed sliver, and selecting it must leave the field blank
+  // instead of showing placeholder text.
+  const model = page.getByRole('combobox', { name: 'Model', exact: true });
+  await expect(model).toHaveValue('');
+  await model.click();
+  await expect(model).not.toHaveAttribute('aria-invalid', 'true');
+  const emptyOption = page.getByRole('option', { name: '(empty)' }).first();
+  await expect(emptyOption).toBeVisible();
+  expect((await emptyOption.boundingBox())?.height ?? 0).toBeGreaterThan(20);
+  await page.getByRole('option', { name: 'alpha' }).first().click();
+  await expect(model).toHaveValue('alpha');
+
+  await model.click();
+  await page.getByRole('option', { name: '(empty)' }).first().click();
+  await expect(model).toHaveValue('');
+  await expect.poll(() => readParams()?.model, { timeout: TIMEOUT_10s }).toBe('');
+  await expect
+    .poll(
+      () => {
+        const paramsFile = findParamsFile();
+        return paramsFile ? fs.readFileSync(paramsFile, 'utf8') : undefined;
+      },
+      { timeout: TIMEOUT_10s }
+    )
+    .toContain('"model": ""');
+
+  // oneOf/const enums get the same treatment
+  const oneOfModel = page.getByRole('combobox', { name: 'OneOf model', exact: true });
+  await oneOfModel.click();
+  await expect(page.getByRole('option', { name: '(empty)' }).first()).toBeVisible();
+  await expect(oneOfModel).toHaveValue('');
+  await expect(oneOfModel).not.toHaveAttribute('aria-invalid', 'true');
+  await page.getByRole('option', { name: '(empty)' }).first().click();
+  await expect(oneOfModel).toHaveValue('');
+  await expect.poll(() => readParams()?.one_of_model, { timeout: TIMEOUT_10s }).toBe('');
+
+  // Enums without an empty option keep the stock renderer and gain no extra row
+  const plain = page.getByRole('combobox', { name: 'Plain choice', exact: true });
+  await plain.click();
+  await expect(page.getByRole('option', { name: 'alpha' }).first()).toBeVisible();
+  await expect(page.getByRole('option', { name: '(empty)' })).toHaveCount(0);
+});
+
 test('renders Mermaid diagrams in the workflow description', async ({ page }) => {
   await setupLocalCollections(page);
 
